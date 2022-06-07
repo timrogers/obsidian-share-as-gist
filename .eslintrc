@@ -1,16 +1,21 @@
 {
-    "root": true,
-    "parser": "@typescript-eslint/parser",
-    "env": { "node": true },
-    "plugins": [
-      "@typescript-eslint"
-    ],
-    "extends": [
-      "eslint:recommended",
-      "plugin:@typescript-eslint/eslint-recommended",
-      "plugin:@typescript-eslint/recommended"
-    ], 
-    "parserOptions": {
-        "sourceType": "module"
-    }
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "env": { "node": true },
+  "plugins": [
+    "@typescript-eslint",
+    "prettier"
+  ],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/eslint-recommended",
+    "plugin:@typescript-eslint/recommended",
+    "prettier"
+  ], 
+  "parserOptions": {
+    "sourceType": "module"
+  },
+  "rules": {
+    "prettier/prettier": 2
   }
+}
