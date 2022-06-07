@@ -20,8 +20,6 @@ export default class ShareAsGistPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		const octokit = new Octokit({ auth: this.settings.dotcomPersonalAccessToken });
-
     this.addCommand({
       id: 'share-as-public-dotcom-gist',
       name: 'Create public link on GitHub.com',
@@ -31,8 +29,7 @@ export default class ShareAsGistPlugin extends Plugin {
         }
 
         const content = editor.getValue();
-        const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-        const filename = markdownView.file.name;
+        const filename = view.file.name;
 
         const result = await this.createGist(filename, content, true);
 
@@ -56,8 +53,7 @@ export default class ShareAsGistPlugin extends Plugin {
         }
 
         const content = editor.getValue();
-        const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-        const filename = markdownView.file.name;
+        const filename = view.file.name;
 
         const result = await this.createGist(filename, content, false);
 
@@ -98,7 +94,7 @@ export default class ShareAsGistPlugin extends Plugin {
         errorMessage: e.message
       };
     }
- 	}
+  }
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
