@@ -8,6 +8,7 @@ import {
   Setting,
   SuggestModal,
 } from 'obsidian';
+import matter from 'gray-matter';
 import { CreateGistResultStatus, createGist, updateGist } from 'src/gists';
 import { getAccessToken, setAccessToken } from './src/storage';
 import {
@@ -16,9 +17,27 @@ import {
   upsertSharedGistForFile,
 } from './src/shared-gists';
 
+interface ShareAsGistSettings {
+  includeFrontMatter: boolean;
+}
+
+const DEFAULT_SETTINGS: ShareAsGistSettings = {
+  includeFrontMatter: false,
+};
+
+interface ShareGistEditorCallbackParams {
+  isPublic: boolean;
+  app: App;
+  includeFrontMatter: boolean;
+}
+
+const stripFrontMatter = (content: string): string => matter(content).content;
+
 const shareGistEditorCallback =
-  (isPublic: boolean, app: App) =>
+  (opts: ShareGistEditorCallbackParams) =>
   async (editor: Editor, view: MarkdownView) => {
+    const { isPublic, app, includeFrontMatter } = opts;
+
     const accessToken = getAccessToken();
 
     if (!accessToken) {
@@ -27,12 +46,16 @@ const shareGistEditorCallback =
       );
     }
 
-    const content = editor.getValue();
+    const rawContent = editor.getValue();
     const filename = view.file.name;
 
-    const existingSharedGists = getSharedGistsForFile(content).filter(
+    const existingSharedGists = getSharedGistsForFile(rawContent).filter(
       (sharedGist) => sharedGist.isPublic === isPublic,
     );
+
+    const content = includeFrontMatter
+      ? stripFrontMatter(rawContent)
+      : rawContent;
 
     if (existingSharedGists.length) {
       new ShareAsGistSelectExistingGistModal(
@@ -59,7 +82,7 @@ const shareGistEditorCallback =
             );
             const updatedContent = upsertSharedGistForFile(
               result.sharedGist,
-              content,
+              rawContent,
             );
             editor.setValue(updatedContent);
           } else {
@@ -91,21 +114,43 @@ const shareGistEditorCallback =
     }
   };
 export default class ShareAsGistPlugin extends Plugin {
+  settings: ShareAsGistSettings;
+
   async onload() {
+    await this.loadSettings();
+
+    const { includeFrontMatter } = this.settings;
+
     this.addCommand({
       id: 'share-as-public-dotcom-gist',
       name: 'Create public link on GitHub.com',
-      editorCallback: shareGistEditorCallback(true, this.app),
+      editorCallback: shareGistEditorCallback({
+        includeFrontMatter,
+        app: this.app,
+        isPublic: true,
+      }),
     });
 
     this.addCommand({
       id: 'share-as-private-dotcom-gist',
       name: 'Create private link on GitHub.com',
-      editorCallback: shareGistEditorCallback(false, this.app),
+      editorCallback: shareGistEditorCallback({
+        includeFrontMatter,
+        app: this.app,
+        isPublic: false,
+      }),
     });
 
     // This adds a settings tab so the user can configure various aspects of the plugin
     this.addSettingTab(new ShareAsGistSettingTab(this.app, this));
+  }
+
+  async loadSettings() {
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+  }
+
+  async saveSettings() {
+    await this.saveData(this.settings);
   }
 }
 
@@ -170,6 +215,20 @@ class ShareAsGistSettingTab extends PluginSettingTab {
           .setPlaceholder('Your personal access token')
           .setValue(accessToken)
           .onChange(setAccessToken),
+      );
+
+    new Setting(containerEl)
+      .setName('Include front matter in gists')
+      .setDesc(
+        'Whether the front matter should be included or stripped away when a note is shared as a gist',
+      )
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.includeFrontMatter)
+          .onChange(async (value) => {
+            this.plugin.settings.includeFrontMatter = value;
+            await this.plugin.saveSettings();
+          }),
       );
   }
 }
