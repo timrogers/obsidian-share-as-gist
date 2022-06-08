@@ -6,120 +6,140 @@ import {
   Plugin,
   PluginSettingTab,
   Setting,
+  SuggestModal,
 } from 'obsidian';
-import { Octokit } from 'octokit';
-interface ShareAsGistSettings {
-  dotcomPersonalAccessToken: string | null;
-}
+import { CreateGistResultStatus, createGist, updateGist } from 'src/gists';
+import { getAccessToken, setAccessToken } from './src/storage';
+import {
+  SharedGist,
+  getSharedGistsForFile,
+  upsertSharedGistForFile,
+} from './src/shared-gists';
 
-const DEFAULT_SETTINGS: ShareAsGistSettings = {
-  dotcomPersonalAccessToken: null,
-};
+const shareGistEditorCallback =
+  (isPublic: boolean, app: App) =>
+  async (editor: Editor, view: MarkdownView) => {
+    const accessToken = getAccessToken();
 
-interface CreateGistResult {
-  status: 'succeeded' | 'failed';
-  url: string | null;
-  errorMessage: string | null;
-}
+    if (!accessToken) {
+      return new Notice(
+        'You need to add your GitHub personal access token in Settings.',
+      );
+    }
 
+    const content = editor.getValue();
+    const filename = view.file.name;
+
+    const existingSharedGists = getSharedGistsForFile(content).filter(
+      (sharedGist) => sharedGist.isPublic === isPublic,
+    );
+
+    if (existingSharedGists.length) {
+      new ShareAsGistSelectExistingGistModal(
+        app,
+        existingSharedGists,
+        async (sharedGist) => {
+          let result;
+
+          if (sharedGist) {
+            result = await updateGist({ sharedGist, accessToken, content });
+          } else {
+            result = await createGist({
+              filename,
+              content,
+              accessToken,
+              isPublic,
+            });
+          }
+
+          if (result.status === CreateGistResultStatus.Succeeded) {
+            navigator.clipboard.writeText(result.sharedGist.url);
+            new Notice(
+              `Copied ${isPublic ? 'public' : 'private'} gist URL to clipboard`,
+            );
+            const updatedContent = upsertSharedGistForFile(
+              result.sharedGist,
+              content,
+            );
+            editor.setValue(updatedContent);
+          } else {
+            new Notice(`GitHub API error: ${result.errorMessage}`);
+          }
+        },
+      ).open();
+    } else {
+      const result = await createGist({
+        filename,
+        content,
+        accessToken,
+        isPublic,
+      });
+
+      if (result.status === CreateGistResultStatus.Succeeded) {
+        navigator.clipboard.writeText(result.sharedGist.url);
+        new Notice(
+          `Copied ${isPublic ? 'public' : 'private'} gist URL to clipboard`,
+        );
+        const updatedContent = upsertSharedGistForFile(
+          result.sharedGist,
+          content,
+        );
+        editor.setValue(updatedContent);
+      } else {
+        new Notice(`GitHub API error: ${result.errorMessage}`);
+      }
+    }
+  };
 export default class ShareAsGistPlugin extends Plugin {
-  settings: ShareAsGistSettings;
-
   async onload() {
-    await this.loadSettings();
-
     this.addCommand({
       id: 'share-as-public-dotcom-gist',
       name: 'Create public link on GitHub.com',
-      editorCallback: async (editor: Editor, view: MarkdownView) => {
-        if (!this.settings.dotcomPersonalAccessToken) {
-          return new Notice(
-            'You need to add your GitHub personal access token in Settings.',
-          );
-        }
-
-        const content = editor.getValue();
-        const filename = view.file.name;
-
-        const result = await this.createGist(filename, content, true);
-
-        console.log(result);
-
-        if (result.status === 'succeeded') {
-          navigator.clipboard.writeText(result.url);
-          new Notice('Copied public gist URL to clipboard');
-        } else {
-          new Notice(`GitHub API error: ${result.errorMessage}`);
-        }
-      },
+      editorCallback: shareGistEditorCallback(true, this.app),
     });
 
     this.addCommand({
       id: 'share-as-private-dotcom-gist',
       name: 'Create private link on GitHub.com',
-      editorCallback: async (editor: Editor, view: MarkdownView) => {
-        if (!this.settings.dotcomPersonalAccessToken) {
-          return new Notice(
-            'You need to add your GitHub personal access token in Settings.',
-          );
-        }
-
-        const content = editor.getValue();
-        const filename = view.file.name;
-
-        const result = await this.createGist(filename, content, false);
-
-        if (result.status === 'succeeded') {
-          navigator.clipboard.writeText(result.url);
-          new Notice('Copied private gist URL to clipboard');
-        } else {
-          new Notice(`GitHub API error: ${result.errorMessage}`);
-        }
-      },
+      editorCallback: shareGistEditorCallback(false, this.app),
     });
 
     // This adds a settings tab so the user can configure various aspects of the plugin
     this.addSettingTab(new ShareAsGistSettingTab(this.app, this));
   }
+}
 
-  async createGist(
-    filename: string,
-    content: string,
-    isPublic: boolean,
-  ): Promise<CreateGistResult> {
-    try {
-      const octokit = new Octokit({
-        auth: this.settings.dotcomPersonalAccessToken,
+class ShareAsGistSelectExistingGistModal extends SuggestModal<SharedGist> {
+  sharedGists: SharedGist[];
+  onSubmit: (sharedGist: SharedGist | null) => Promise<void>;
+
+  constructor(
+    app: App,
+    sharedGists: SharedGist[],
+    onSubmit: (sharedGist: SharedGist) => Promise<void>,
+  ) {
+    super(app);
+    this.sharedGists = sharedGists;
+    this.onSubmit = onSubmit;
+  }
+
+  getSuggestions(): Array<SharedGist | null> {
+    return this.sharedGists.concat(null);
+  }
+
+  renderSuggestion(sharedGist: SharedGist | null, el: HTMLElement) {
+    if (sharedGist === null) {
+      el.createEl('div', { text: 'Create new gist' });
+    } else {
+      el.createEl('div', {
+        text: sharedGist.isPublic ? 'Public gist' : 'Private gist',
       });
-
-      const response = await octokit.rest.gists.create({
-        description: filename,
-        public: isPublic,
-        files: {
-          [filename]: { content },
-        },
-      });
-
-      return {
-        status: 'succeeded',
-        url: response.data.html_url as string,
-        errorMessage: null,
-      };
-    } catch (e) {
-      return {
-        status: 'failed',
-        url: null,
-        errorMessage: e.message,
-      };
+      el.createEl('small', { text: `Created at ${sharedGist.createdAt}` });
     }
   }
 
-  async loadSettings() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-  }
-
-  async saveSettings() {
-    await this.saveData(this.settings);
+  onChooseSuggestion(sharedGist: SharedGist | null) {
+    this.onSubmit(sharedGist).then(() => this.close());
   }
 }
 
@@ -134,6 +154,8 @@ class ShareAsGistSettingTab extends PluginSettingTab {
   display(): void {
     const { containerEl } = this;
 
+    const accessToken = getAccessToken();
+
     containerEl.empty();
 
     containerEl.createEl('h2', { text: 'Share as Gist' });
@@ -146,11 +168,8 @@ class ShareAsGistSettingTab extends PluginSettingTab {
       .addText((text) =>
         text
           .setPlaceholder('Your personal access token')
-          .setValue(this.plugin.settings.dotcomPersonalAccessToken)
-          .onChange(async (value) => {
-            this.plugin.settings.dotcomPersonalAccessToken = value;
-            await this.plugin.saveSettings();
-          }),
+          .setValue(accessToken)
+          .onChange(setAccessToken),
       );
   }
 }
