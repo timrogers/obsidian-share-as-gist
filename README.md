@@ -1,73 +1,47 @@
 # Obsidian Sample Plugin
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+This plugin for Obsidian (https://obsidian.md) allows you to share your notes as [GitHub Gists](https://gist.github.com/).
 
-This project uses Typescript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in Typescript Definition format, which contains TSDoc comments describing what it does.
+You can share your notes privately (i.e. only people with the link can see the note) or publicly (i.e. the note is visible on your profile).
 
-**Note:** The Obsidian API is still in early alpha and is subject to change at any time!
+Once you've create a gist, if you make changes to your note (for example responding to feedback), you can update your existing gist straight from Obsidian.
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Changes the default font color to red using `styles.css`.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+## Usage
 
-## First time developing plugins?
+1. Install the plugin. (For now, you'll have to add it to your Obsidian vault manually, but it should soon be available in the Community Plugins directory.)
+2. [Create a GitHub personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) with the `gist` scope, and copy it to your clipboard.
+3. Open "Settings" in Obsidian, then go to "Share as Gist" under "Plugin Options".
+4. Paste your access token into the "GitHub.com access token" box, then close "Settings".
+5. To share a note, open the Command Palette and type "gist". You'll see commands for creating a public and private link. Pick the one you want and hit enter. Your gist will be created, and the URL for sharing will be added to your clipboard.
+6. Make a change to your note, and then follow step 5 again. You will be asked if you want to update the existing note or create a new one.
 
-Quick starting guide for new plugin devs:
+By default, any YAML front matter will not be included in your gists. You can change that by toggling the "Include front matter in gists" setting.
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+## Securing your GitHub personal access token
 
-## Releasing new releases
+Your GitHub access token will be stored in Obsidian's `localStorage`.
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+This means that it will not be stored in a file and will not be backed up or synced with the rest of your Vault. But it is theoretically possible for other Obsidian plugins to access it.
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+For your security, you should make sure that you give your personal access token the lowest possible permissions - just the `gist` scope is enough. This will mean that your token will not have access to your code or other sensitive data.
 
-## Adding your plugin to the community plugin list
+## Contributing
 
-- Check https://github.com/obsidianmd/obsidian-releases/blob/master/plugin-review.md
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+1. Clone this repo into the `.obsidian/plugins` directory in your Obsidian vault.
+2. Navigate to the `obsidian-share-as-gist` directory you've just cloned.
+3. Install the dependencies by running `npm i`.
+4. Start a process to automatically build your plugin when you make changes by running `npm run dev`.
+5. Make changes, and test them in Obsidian. You will have to manually reload the plugin from the "Community plugins" screen when you make a change.
+6. Push your changes to the repo if you have access or your own fork, and create a pull request.
 
-## How to use
+## Releasing
 
-- Clone this repo.
-- `npm i` or `yarn` to install dependencies
-- `npm run dev` to start compilation in watch mode.
-
-## Manually installing the plugin
-
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
-
-## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint .\src\`
-
-
-## API Documentation
-
-See https://github.com/obsidianmd/obsidian-api
+1. Work out the next version number. We use [semantic versioning](https://semver.org/).
+2. Add an entry to `CHANGELOG.md`, describing your changes.
+3. Update the version number in `package.json`.
+4. Update `versions.json`, defining what minimum Obsidian version your plugin is compatible with. In general, copying the last entry in the file should be fine.
+5. Run `npm run version`.
+6. Commit `manifest.json` and `package.json`. In the commit message, make the version number the title, (e.g. `1.0.1`) and copy your changelog entry into the body.
+7. Tag your commit with the version number, e.g. `git tag -a 1.0.1 -m '1.0.1'`.
+8. Push your changes, including tags.
+9. A workflow will automatically run in GitHub Actions to build and publish a release.
