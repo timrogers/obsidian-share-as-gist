@@ -1,4 +1,4 @@
-# Obsidian Sample Plugin
+# "Share as Gist" Obsidian plugin
 
 This plugin for Obsidian (https://obsidian.md) allows you to share your notes as [GitHub Gists](https://gist.github.com/).
 
