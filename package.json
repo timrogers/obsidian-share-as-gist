@@ -29,6 +29,6 @@
 	},
 	"dependencies": {
 		"gray-matter": "^4.0.3",
-		"octokit": "^1.7.2"
+		"octokit": "^1.8.1"
 	}
 }
