@@ -28,7 +28,7 @@
 		"typescript": "4.7.4"
 	},
 	"dependencies": {
-		"gray-matter": "^4.0.3",
-		"octokit": "^1.8.1"
+		"@octokit/rest": "^18.12.0",
+		"gray-matter": "^4.0.3"
 	}
 }
