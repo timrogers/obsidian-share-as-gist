@@ -1,4 +1,4 @@
-import { Octokit } from 'octokit';
+import { Octokit } from '@octokit/rest';
 import { SharedGist } from './shared-gists';
 
 export enum CreateGistResultStatus {
