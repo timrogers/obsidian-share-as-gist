@@ -1,3 +1,10 @@
+# v1.1.0 (July 21, 2022)
+
+* Add new "Enable updating gists after creation" option, allowing users to control if gists can be updated after creation. This defaults to "on", but if it is turned off, the plugin adds no front matter to your notes! ✨
+* Fix "Include front matter in gists" option (before it did the opposite of what was intended!) 
+* Rename commands from "Create public link on GitHub.com" and "Create private link on GitHub.com" to "Share as public gist on GitHub.com" and "Share as public gist on GitHub.com"
+* Apply settings changed immediately, rather than waiting for the plugin to be reloaded
+
 # v1.0.2 (July 11, 2022)
 
 * Polyfill `Buffer` in non-Node.js environments for wider compatability

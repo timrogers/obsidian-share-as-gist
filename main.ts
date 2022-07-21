@@ -18,27 +18,39 @@ import {
 } from './src/shared-gists';
 
 interface ShareAsGistSettings {
+  enableUpdatingGistsAfterCreation: boolean;
   includeFrontMatter: boolean;
 }
 
 const DEFAULT_SETTINGS: ShareAsGistSettings = {
   includeFrontMatter: false,
+  enableUpdatingGistsAfterCreation: true,
 };
 
 interface ShareGistEditorCallbackParams {
   isPublic: boolean;
   app: App;
-  includeFrontMatter: boolean;
+  plugin: ShareAsGistPlugin;
 }
+
+const getLatestSettings = async (
+  plugin: ShareAsGistPlugin,
+): Promise<ShareAsGistSettings> => {
+  await plugin.loadSettings();
+  return plugin.settings;
+};
 
 const stripFrontMatter = (content: string): string => matter(content).content;
 
 const shareGistEditorCallback =
   (opts: ShareGistEditorCallbackParams) =>
   async (editor: Editor, view: MarkdownView) => {
-    const { isPublic, app, includeFrontMatter } = opts;
+    const { isPublic, app, plugin } = opts;
 
     const accessToken = getAccessToken();
+
+    const { enableUpdatingGistsAfterCreation, includeFrontMatter } =
+      await getLatestSettings(plugin);
 
     if (!accessToken) {
       return new Notice(
@@ -54,10 +66,10 @@ const shareGistEditorCallback =
     );
 
     const content = includeFrontMatter
-      ? stripFrontMatter(rawContent)
-      : rawContent;
+      ? rawContent
+      : stripFrontMatter(rawContent);
 
-    if (existingSharedGists.length) {
+    if (enableUpdatingGistsAfterCreation && existingSharedGists.length) {
       new ShareAsGistSelectExistingGistModal(
         app,
         existingSharedGists,
@@ -103,11 +115,17 @@ const shareGistEditorCallback =
         new Notice(
           `Copied ${isPublic ? 'public' : 'private'} gist URL to clipboard`,
         );
-        const updatedContent = upsertSharedGistForFile(
-          result.sharedGist,
-          content,
-        );
-        editor.setValue(updatedContent);
+
+        if (enableUpdatingGistsAfterCreation) {
+          const updatedContent = upsertSharedGistForFile(
+            result.sharedGist,
+            content,
+          );
+
+          editor.setValue(updatedContent);
+        } else {
+          editor.setValue(content);
+        }
       } else {
         new Notice(`GitHub API error: ${result.errorMessage}`);
       }
@@ -119,13 +137,11 @@ export default class ShareAsGistPlugin extends Plugin {
   async onload() {
     await this.loadSettings();
 
-    const { includeFrontMatter } = this.settings;
-
     this.addCommand({
       id: 'share-as-public-dotcom-gist',
-      name: 'Create public link on GitHub.com',
+      name: 'Share as public gist on GitHub.com',
       editorCallback: shareGistEditorCallback({
-        includeFrontMatter,
+        plugin: this,
         app: this.app,
         isPublic: true,
       }),
@@ -133,9 +149,9 @@ export default class ShareAsGistPlugin extends Plugin {
 
     this.addCommand({
       id: 'share-as-private-dotcom-gist',
-      name: 'Create private link on GitHub.com',
+      name: 'Share as private gist on GitHub.com',
       editorCallback: shareGistEditorCallback({
-        includeFrontMatter,
+        plugin: this,
         app: this.app,
         isPublic: false,
       }),
@@ -215,6 +231,25 @@ class ShareAsGistSettingTab extends PluginSettingTab {
           .setPlaceholder('Your personal access token')
           .setValue(accessToken)
           .onChange(setAccessToken),
+      );
+
+    new Setting(containerEl)
+      .setName('Enable updating gists after creation')
+      .setDesc(
+        'Whether gists should be updateable through this plugin after creation. ' +
+          'If this is turned on, when you create a gist, you will be able to choose ' +
+          'to update an existing gist (if one exists) or create a brand new one. ' +
+          'To make this possible, front matter will be added to your notes to track ' +
+          'gists that you have created. If this is turned off, a brand new gist will ' +
+          'always be created.',
+      )
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.enableUpdatingGistsAfterCreation)
+          .onChange(async (value) => {
+            this.plugin.settings.enableUpdatingGistsAfterCreation = value;
+            await this.plugin.saveSettings();
+          }),
       );
 
     new Setting(containerEl)
