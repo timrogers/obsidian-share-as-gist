@@ -15,7 +15,7 @@
 	"license": "MIT",
 	"devDependencies": {
 		"@esbuild-plugins/node-globals-polyfill": "^0.1.1",
-		"@types/node": "^18.7.3",
+		"@types/node": "^18.7.5",
 		"@typescript-eslint/eslint-plugin": "^5.33.0",
 		"@typescript-eslint/parser": "^5.33.0",
 		"builtin-modules": "^3.2.0",
