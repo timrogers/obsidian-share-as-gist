@@ -1,6 +1,5 @@
 import {
   App,
-  Editor,
   MarkdownView,
   Notice,
   Plugin,
@@ -43,8 +42,7 @@ const getLatestSettings = async (
 const stripFrontMatter = (content: string): string => matter(content).content;
 
 const shareGistEditorCallback =
-  (opts: ShareGistEditorCallbackParams) =>
-  async (editor: Editor, view: MarkdownView) => {
+  (opts: ShareGistEditorCallbackParams) => async () => {
     const { isPublic, app, plugin } = opts;
 
     const accessToken = getAccessToken();
@@ -58,6 +56,13 @@ const shareGistEditorCallback =
       );
     }
 
+    const view = app.workspace.getActiveViewOfType(MarkdownView);
+
+    if (!view) {
+      return new Notice('No active file');
+    }
+
+    const editor = view.editor;
     const rawContent = editor.getValue();
     const filename = view.file.name;
 
@@ -122,9 +127,11 @@ const shareGistEditorCallback =
             content,
           );
 
-          editor.setValue(updatedContent);
+          app.vault.modify(view.file, updatedContent);
+          editor.refresh();
         } else {
-          editor.setValue(content);
+          app.vault.modify(view.file, content);
+          editor.refresh();
         }
       } else {
         new Notice(`GitHub API error: ${result.errorMessage}`);
@@ -150,7 +157,7 @@ export default class ShareAsGistPlugin extends Plugin {
     this.addCommand({
       id: 'share-as-private-dotcom-gist',
       name: 'Share as private gist on GitHub.com',
-      editorCallback: shareGistEditorCallback({
+      callback: shareGistEditorCallback({
         plugin: this,
         app: this.app,
         isPublic: false,
