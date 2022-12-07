@@ -1,3 +1,7 @@
+# v1.2.0 (December 7, 2022)
+
+* Add support for creating a gist when in Obsidian's "Reading" or "Live Preview" modes
+
 # v1.1.0 (July 21, 2022)
 
 * Add new "Enable updating gists after creation" option, allowing users to control if gists can be updated after creation. This defaults to "on", but if it is turned off, the plugin adds no front matter to your notes! ✨

@@ -1,7 +1,7 @@
 {
 	"id": "obsidian-share-as-gist",
 	"name": "Share as Gist",
-	"version": "1.1.0",
+	"version": "1.2.0",
 	"minAppVersion": "0.9.7",
 	"description": "Shares an Obsidian note as a GitHub.com gist",
 	"author": "Tim Rogers",
