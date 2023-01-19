@@ -1,9 +1,6 @@
-import esbuild from "esbuild";
-import process from "process";
-import builtins from 'builtin-modules'
-import NodeGlobalsPolyfill from '@esbuild-plugins/node-globals-polyfill'
-
-const { NodeGlobalsPolyfillPlugin } = NodeGlobalsPolyfill;
+import esbuild from 'esbuild';
+import process from 'process';
+import builtins from 'builtin-modules';
 
 const banner =
   `/*
@@ -14,7 +11,7 @@ if you want to view the source, please visit the github repository of this plugi
 
 const prod = (process.argv[2] === 'production');
 
-esbuild.build({
+const context = await esbuild.context({
   banner: {
     js: banner,
   },
@@ -46,15 +43,16 @@ esbuild.build({
     '@codemirror/view',
     ...builtins],
   format: 'cjs',
-  watch: !prod,
   target: 'es2016',
-  logLevel: "info",
+  logLevel: 'info',
   sourcemap: prod ? false : 'inline',
   treeShaking: true,
   outfile: 'main.js',
-  plugins: [
-    NodeGlobalsPolyfillPlugin({
-      buffer: true,
-    }),
-  ],
-}).catch(() => process.exit(1));
+});
+
+if (!prod) {
+  await context.watch();
+} else {
+  await context.rebuild();
+  process.exit(0);
+}
