@@ -17,7 +17,7 @@
 		"@esbuild-plugins/node-globals-polyfill": "^0.2.3",
 		"@types/node": "^18.11.18",
 		"@typescript-eslint/eslint-plugin": "^5.49.0",
-		"@typescript-eslint/parser": "^5.49.0",
+		"@typescript-eslint/parser": "^5.52.0",
 		"builtin-modules": "^3.2.0",
 		"esbuild": "0.17.7",
 		"eslint": "^8.33.0",
