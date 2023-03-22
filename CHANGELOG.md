@@ -1,3 +1,7 @@
+# v1.2.1 (March 22, 2023)
+
+* Preserve existing front matter when sharing as a gist with the "Enable updating gists after creation" option enabled
+
 # v1.2.0 (December 7, 2022)
 
 * Add support for creating a gist when in Obsidian's "Reading" or "Live Preview" modes

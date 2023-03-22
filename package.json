@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-share-as-gist",
-	"version": "1.2.0",
+	"version": "1.2.1",
 	"description": "Shares an Obsidian note as a GitHub.com gist",
 	"main": "main.js",
 	"scripts": {
