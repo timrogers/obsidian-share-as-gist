@@ -124,7 +124,7 @@ const shareGistEditorCallback =
         if (enableUpdatingGistsAfterCreation) {
           const updatedContent = upsertSharedGistForFile(
             result.sharedGist,
-            content,
+            rawContent,
           );
 
           app.vault.modify(view.file, updatedContent);
