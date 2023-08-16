@@ -24,7 +24,7 @@
 		"eslint-config-prettier": "^8.8.0",
 		"eslint-plugin-prettier": "^5.0.0",
 		"obsidian": "latest",
-		"prettier": "^3.0.0",
+		"prettier": "^3.0.2",
 		"tslib": "2.6.1",
 		"typescript": "5.1.6"
 	},
