@@ -8,7 +8,7 @@ Once you've create a gist, if you make changes to your note (for example respond
 
 ## Usage
 
-1. Install the plugin. (For now, you'll have to add it to your Obsidian vault manually, but it should soon be available in the Community Plugins directory.)
+1. [Install the plugin](https://obsidian.md/plugins?id=obsidian-share-as-gist).
 2. [Create a GitHub personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) with the `gist` scope, and copy it to your clipboard.
 
 <img width="636" alt="Screenshot 2022-06-09 at 09 47 43" src="https://user-images.githubusercontent.com/116134/172805660-4e563a93-a042-4aa7-8b48-db0c501aac14.png">
@@ -23,9 +23,7 @@ Once you've create a gist, if you make changes to your note (for example respond
 
 <img width="770" alt="Screenshot 2022-07-21 at 09 12 16" src="https://user-images.githubusercontent.com/116134/180164154-02817121-e88a-419d-9528-9be58212ed9c.png">
 
-6. Make a change to your note, and then follow step 5 again. You will be asked if you want to update the existing note or create a new one.
-
-<img width="781" alt="Screenshot 2022-06-09 at 09 49 00" src="https://user-images.githubusercontent.com/116134/172805957-dbbe8223-8056-4685-aad4-4fd54338c85f.png">
+6. Make a change to your note, and the change will be automatically reflected in your gist. This can be disabled with the "Enable Auto-saving" option (in which case you can run the command from step 5 again to manually update the gist).
 
 To enable existing gists to be updated, by default, extra YAML front matter is added to your notes. You can turn this off by disabling the "Enable updating gists after creation" setting.
 

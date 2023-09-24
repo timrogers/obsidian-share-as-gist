@@ -1,5 +1,6 @@
 import {
   App,
+  Editor,
   MarkdownView,
   Notice,
   Plugin,
@@ -18,18 +19,30 @@ import {
 
 interface ShareAsGistSettings {
   enableUpdatingGistsAfterCreation: boolean;
+  enableAutoSaving: boolean;
+  showAutoSaveNotice: boolean;
+  autoSaveDelaySeconds: number;
   includeFrontMatter: boolean;
 }
 
 const DEFAULT_SETTINGS: ShareAsGistSettings = {
   includeFrontMatter: false,
   enableUpdatingGistsAfterCreation: true,
+  enableAutoSaving: true,
+  autoSaveDelaySeconds: 10,
+  showAutoSaveNotice: false,
 };
 
 interface ShareGistEditorCallbackParams {
   isPublic: boolean;
   app: App;
   plugin: ShareAsGistPlugin;
+}
+
+interface DocumentChangedAutoSaveCallbackParams {
+  app: App;
+  plugin: ShareAsGistPlugin;
+  editor: Editor;
 }
 
 const getLatestSettings = async (
@@ -138,6 +151,49 @@ const shareGistEditorCallback =
       }
     }
   };
+
+const documentChangedAutoSaveCallback = async (
+  opts: DocumentChangedAutoSaveCallbackParams,
+) => {
+  const { plugin, editor } = opts;
+  const rawContent = editor.getValue();
+  const accessToken = getAccessToken();
+
+  const { includeFrontMatter, showAutoSaveNotice } =
+    await getLatestSettings(plugin);
+
+  if (!accessToken) {
+    return new Notice(
+      'You need to add your GitHub personal access token in Settings.',
+    );
+  }
+
+  const existingSharedGists = getSharedGistsForFile(rawContent);
+
+  const content = includeFrontMatter
+    ? rawContent
+    : stripFrontMatter(rawContent);
+
+  if (existingSharedGists.length) {
+    for (const sharedGist of existingSharedGists) {
+      const result = await updateGist({ sharedGist, accessToken, content });
+      if (result.status === CreateGistResultStatus.Succeeded) {
+        const updatedContent = upsertSharedGistForFile(
+          result.sharedGist,
+          rawContent,
+        );
+        editor.setValue(updatedContent);
+
+        if (showAutoSaveNotice) {
+          new Notice('Gist updated');
+        }
+      } else {
+        new Notice(`GitHub API error: ${result.errorMessage}`);
+      }
+    }
+  }
+};
+
 export default class ShareAsGistPlugin extends Plugin {
   settings: ShareAsGistSettings;
 
@@ -164,8 +220,42 @@ export default class ShareAsGistPlugin extends Plugin {
       }),
     });
 
+    this.addTimeoutUpdater();
+
     // This adds a settings tab so the user can configure various aspects of the plugin
     this.addSettingTab(new ShareAsGistSettingTab(this.app, this));
+  }
+
+  addTimeoutUpdater() {
+    let timeout: number | null = null;
+    let previousContent = '';
+
+    this.app.workspace.on('editor-change', async (editor, _info) => {
+      // Frontmatter is stripped here because it is updated when the gist is updated,
+      // so there would be an infinite loop of updating if it wasn't.
+      if (stripFrontMatter(editor.getValue()) === previousContent) {
+        return;
+      }
+
+      previousContent = stripFrontMatter(editor.getValue());
+
+      if (timeout) {
+        window.clearTimeout(timeout);
+      }
+
+      const { enableAutoSaving, autoSaveDelaySeconds } =
+        await getLatestSettings(this);
+
+      if (enableAutoSaving) {
+        timeout = window.setTimeout(async () => {
+          await documentChangedAutoSaveCallback({
+            plugin: this,
+            app: this.app,
+            editor: editor.getDoc(),
+          });
+        }, autoSaveDelaySeconds * 1000);
+      }
+    });
   }
 
   async loadSettings() {
@@ -269,6 +359,46 @@ class ShareAsGistSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.includeFrontMatter)
           .onChange(async (value) => {
             this.plugin.settings.includeFrontMatter = value;
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName('Enable auto-saving Gists after edit')
+      .setDesc('Whether to update linked gists when the document is updated')
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.enableAutoSaving)
+          .onChange(async (value) => {
+            this.plugin.settings.enableAutoSaving = value;
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName('Enable auto-save notice')
+      .setDesc('Whether to show a notice when a linked gist is auto-saved')
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.showAutoSaveNotice)
+          .onChange(async (value) => {
+            this.plugin.settings.showAutoSaveNotice = value;
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName('Auto-save delay seconds')
+      .setDesc(
+        'The delay after a document is updated after which the Gist is updated, in seconds',
+      )
+      .addSlider((slider) =>
+        slider
+          .setValue(this.plugin.settings.autoSaveDelaySeconds)
+          .setLimits(5, 120, 5)
+          .setDynamicTooltip()
+          .onChange(async (value) => {
+            this.plugin.settings.autoSaveDelaySeconds = value;
             await this.plugin.saveSettings();
           }),
       );
