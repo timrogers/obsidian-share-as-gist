@@ -28,7 +28,7 @@ interface ShareAsGistSettings {
 const DEFAULT_SETTINGS: ShareAsGistSettings = {
   includeFrontMatter: false,
   enableUpdatingGistsAfterCreation: true,
-  enableAutoSaving: true,
+  enableAutoSaving: false,
   autoSaveDelaySeconds: 10,
   showAutoSaveNotice: false,
 };
