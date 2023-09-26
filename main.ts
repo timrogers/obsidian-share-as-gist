@@ -7,6 +7,7 @@ import {
   PluginSettingTab,
   Setting,
   SuggestModal,
+  TFile,
 } from 'obsidian';
 import matter from 'gray-matter';
 import { CreateGistResultStatus, createGist, updateGist } from 'src/gists';
@@ -21,7 +22,6 @@ interface ShareAsGistSettings {
   enableUpdatingGistsAfterCreation: boolean;
   enableAutoSaving: boolean;
   showAutoSaveNotice: boolean;
-  autoSaveDelaySeconds: number;
   includeFrontMatter: boolean;
 }
 
@@ -29,7 +29,6 @@ const DEFAULT_SETTINGS: ShareAsGistSettings = {
   includeFrontMatter: false,
   enableUpdatingGistsAfterCreation: true,
   enableAutoSaving: false,
-  autoSaveDelaySeconds: 10,
   showAutoSaveNotice: false,
 };
 
@@ -42,7 +41,8 @@ interface ShareGistEditorCallbackParams {
 interface DocumentChangedAutoSaveCallbackParams {
   app: App;
   plugin: ShareAsGistPlugin;
-  editor: Editor;
+  content: string;
+  file: TFile;
 }
 
 const getLatestSettings = async (
@@ -155,8 +155,7 @@ const shareGistEditorCallback =
 const documentChangedAutoSaveCallback = async (
   opts: DocumentChangedAutoSaveCallbackParams,
 ) => {
-  const { plugin, editor } = opts;
-  const rawContent = editor.getValue();
+  const { plugin, file, content: rawContent } = opts;
   const accessToken = getAccessToken();
 
   const { includeFrontMatter, showAutoSaveNotice } =
@@ -182,8 +181,7 @@ const documentChangedAutoSaveCallback = async (
           result.sharedGist,
           rawContent,
         );
-        editor.setValue(updatedContent);
-
+        await file.vault.adapter.write(file.path, updatedContent);
         if (showAutoSaveNotice) {
           new Notice('Gist updated');
         }
@@ -230,30 +228,31 @@ export default class ShareAsGistPlugin extends Plugin {
     let timeout: number | null = null;
     let previousContent = '';
 
-    this.app.workspace.on('editor-change', async (editor, _info) => {
+    this.app.workspace.on('modify', async (file: TFile) => {
+      const content = await file.vault.adapter.read(file.path);
       // Frontmatter is stripped here because it is updated when the gist is updated,
       // so there would be an infinite loop of updating if it wasn't.
-      if (stripFrontMatter(editor.getValue()) === previousContent) {
+      if (stripFrontMatter(content) === previousContent) {
         return;
       }
 
-      previousContent = stripFrontMatter(editor.getValue());
+      previousContent = stripFrontMatter(content);
 
       if (timeout) {
         window.clearTimeout(timeout);
       }
 
-      const { enableAutoSaving, autoSaveDelaySeconds } =
-        await getLatestSettings(this);
+      const { enableAutoSaving } = await getLatestSettings(this);
 
       if (enableAutoSaving) {
         timeout = window.setTimeout(async () => {
           await documentChangedAutoSaveCallback({
             plugin: this,
             app: this.app,
-            editor: editor.getDoc(),
+            content,
+            file,
           });
-        }, autoSaveDelaySeconds * 1000);
+        }, 15 * 1000);
       }
     });
   }
@@ -383,22 +382,6 @@ class ShareAsGistSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.showAutoSaveNotice)
           .onChange(async (value) => {
             this.plugin.settings.showAutoSaveNotice = value;
-            await this.plugin.saveSettings();
-          }),
-      );
-
-    new Setting(containerEl)
-      .setName('Auto-save delay seconds')
-      .setDesc(
-        'The delay after a document is updated after which the Gist is updated, in seconds',
-      )
-      .addSlider((slider) =>
-        slider
-          .setValue(this.plugin.settings.autoSaveDelaySeconds)
-          .setLimits(5, 120, 5)
-          .setDynamicTooltip()
-          .onChange(async (value) => {
-            this.plugin.settings.autoSaveDelaySeconds = value;
             await this.plugin.saveSettings();
           }),
       );
