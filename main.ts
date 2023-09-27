@@ -1,5 +1,6 @@
 import {
   App,
+  Debouncer,
   MarkdownView,
   Notice,
   Plugin,
@@ -7,6 +8,7 @@ import {
   Setting,
   SuggestModal,
   TFile,
+  debounce,
 } from 'obsidian';
 import matter from 'gray-matter';
 import { CreateGistResultStatus, createGist, updateGist } from 'src/gists';
@@ -217,41 +219,48 @@ export default class ShareAsGistPlugin extends Plugin {
       }),
     });
 
-    this.addTimeoutUpdater();
+    this.addModifyCallback();
 
     // This adds a settings tab so the user can configure various aspects of the plugin
     this.addSettingTab(new ShareAsGistSettingTab(this.app, this));
   }
 
-  addTimeoutUpdater() {
-    let timeout: number | null = null;
-    let previousContent = '';
+  addModifyCallback() {
+    const previousContents: Record<string, string> = {};
+    const debouncedCallbacks: Record<
+      string,
+      Debouncer<[string, TFile], Promise<void>>
+    > = {};
 
-    this.app.workspace.on('modify', async (file: TFile) => {
+    this.app.vault.on('modify', async (file: TFile) => {
       const content = await file.vault.adapter.read(file.path);
+
       // Frontmatter is stripped here because it is updated when the gist is updated,
       // so there would be an infinite loop of updating if it wasn't.
-      if (stripFrontMatter(content) === previousContent) {
+      if (stripFrontMatter(content) === previousContents[file.path]) {
         return;
       }
 
-      previousContent = stripFrontMatter(content);
+      previousContents[file.path] = stripFrontMatter(content);
 
-      if (timeout) {
-        window.clearTimeout(timeout);
+      if (!debouncedCallbacks[file.path]) {
+        debouncedCallbacks[file.path] = debounce(
+          async (content: string, file: TFile) =>
+            await documentChangedAutoSaveCallback({
+              plugin: this,
+              app: this.app,
+              content,
+              file,
+            }),
+          15 * 1000,
+          true,
+        );
       }
 
       const { enableAutoSaving } = await getLatestSettings(this);
 
       if (enableAutoSaving) {
-        timeout = window.setTimeout(async () => {
-          await documentChangedAutoSaveCallback({
-            plugin: this,
-            app: this.app,
-            content,
-            file,
-          });
-        }, 15 * 1000);
+        await debouncedCallbacks[file.path](content, file);
       }
     });
   }
