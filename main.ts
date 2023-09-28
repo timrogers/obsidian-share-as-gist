@@ -1,11 +1,14 @@
 import {
   App,
+  Debouncer,
   MarkdownView,
   Notice,
   Plugin,
   PluginSettingTab,
   Setting,
   SuggestModal,
+  TFile,
+  debounce,
 } from 'obsidian';
 import matter from 'gray-matter';
 import { CreateGistResultStatus, createGist, updateGist } from 'src/gists';
@@ -18,18 +21,29 @@ import {
 
 interface ShareAsGistSettings {
   enableUpdatingGistsAfterCreation: boolean;
+  enableAutoSaving: boolean;
+  showAutoSaveNotice: boolean;
   includeFrontMatter: boolean;
 }
 
 const DEFAULT_SETTINGS: ShareAsGistSettings = {
   includeFrontMatter: false,
   enableUpdatingGistsAfterCreation: true,
+  enableAutoSaving: false,
+  showAutoSaveNotice: false,
 };
 
 interface ShareGistEditorCallbackParams {
   isPublic: boolean;
   app: App;
   plugin: ShareAsGistPlugin;
+}
+
+interface DocumentChangedAutoSaveCallbackParams {
+  app: App;
+  plugin: ShareAsGistPlugin;
+  content: string;
+  file: TFile;
 }
 
 const getLatestSettings = async (
@@ -138,6 +152,47 @@ const shareGistEditorCallback =
       }
     }
   };
+
+const documentChangedAutoSaveCallback = async (
+  opts: DocumentChangedAutoSaveCallbackParams,
+) => {
+  const { plugin, file, content: rawContent } = opts;
+  const accessToken = getAccessToken();
+
+  const { includeFrontMatter, showAutoSaveNotice } =
+    await getLatestSettings(plugin);
+
+  if (!accessToken) {
+    return new Notice(
+      'You need to add your GitHub personal access token in Settings.',
+    );
+  }
+
+  const existingSharedGists = getSharedGistsForFile(rawContent);
+
+  const content = includeFrontMatter
+    ? rawContent
+    : stripFrontMatter(rawContent);
+
+  if (existingSharedGists.length) {
+    for (const sharedGist of existingSharedGists) {
+      const result = await updateGist({ sharedGist, accessToken, content });
+      if (result.status === CreateGistResultStatus.Succeeded) {
+        const updatedContent = upsertSharedGistForFile(
+          result.sharedGist,
+          rawContent,
+        );
+        await file.vault.adapter.write(file.path, updatedContent);
+        if (showAutoSaveNotice) {
+          new Notice('Gist updated');
+        }
+      } else {
+        new Notice(`GitHub API error: ${result.errorMessage}`);
+      }
+    }
+  }
+};
+
 export default class ShareAsGistPlugin extends Plugin {
   settings: ShareAsGistSettings;
 
@@ -164,8 +219,50 @@ export default class ShareAsGistPlugin extends Plugin {
       }),
     });
 
+    this.addModifyCallback();
+
     // This adds a settings tab so the user can configure various aspects of the plugin
     this.addSettingTab(new ShareAsGistSettingTab(this.app, this));
+  }
+
+  addModifyCallback() {
+    const previousContents: Record<string, string> = {};
+    const debouncedCallbacks: Record<
+      string,
+      Debouncer<[string, TFile], Promise<void>>
+    > = {};
+
+    this.app.vault.on('modify', async (file: TFile) => {
+      const content = await file.vault.adapter.read(file.path);
+
+      // Frontmatter is stripped here because it is updated when the gist is updated,
+      // so there would be an infinite loop of updating if it wasn't.
+      if (stripFrontMatter(content) === previousContents[file.path]) {
+        return;
+      }
+
+      previousContents[file.path] = stripFrontMatter(content);
+
+      if (!debouncedCallbacks[file.path]) {
+        debouncedCallbacks[file.path] = debounce(
+          async (content: string, file: TFile) =>
+            await documentChangedAutoSaveCallback({
+              plugin: this,
+              app: this.app,
+              content,
+              file,
+            }),
+          15 * 1000,
+          true,
+        );
+      }
+
+      const { enableAutoSaving } = await getLatestSettings(this);
+
+      if (enableAutoSaving) {
+        await debouncedCallbacks[file.path](content, file);
+      }
+    });
   }
 
   async loadSettings() {
@@ -269,6 +366,30 @@ class ShareAsGistSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.includeFrontMatter)
           .onChange(async (value) => {
             this.plugin.settings.includeFrontMatter = value;
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName('Enable auto-saving Gists after edit')
+      .setDesc('Whether to update linked gists when the document is updated')
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.enableAutoSaving)
+          .onChange(async (value) => {
+            this.plugin.settings.enableAutoSaving = value;
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName('Enable auto-save notice')
+      .setDesc('Whether to show a notice when a linked gist is auto-saved')
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.showAutoSaveNotice)
+          .onChange(async (value) => {
+            this.plugin.settings.showAutoSaveNotice = value;
             await this.plugin.saveSettings();
           }),
       );
