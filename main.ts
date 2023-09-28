@@ -229,7 +229,7 @@ export default class ShareAsGistPlugin extends Plugin {
     const previousContents: Record<string, string> = {};
     const debouncedCallbacks: Record<
       string,
-      Debouncer<[string, TFile], Promise<void>>
+      Debouncer<[string, TFile], Promise<Notice>>
     > = {};
 
     this.app.vault.on('modify', async (file: TFile) => {
