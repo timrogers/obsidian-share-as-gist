@@ -1,3 +1,7 @@
+# v1.3.0 (September 28, 2023)
+
+* Add optional "Enable auto-saving Gists after edit" option, which updates your Gists on GitHub when you save changes (thanks @Jamalam360!)
+
 # v1.2.1 (March 22, 2023)
 
 * Preserve existing front matter when sharing as a gist with the "Enable updating gists after creation" option enabled
