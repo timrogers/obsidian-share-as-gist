@@ -1,3 +1,7 @@
+# v1.3.1 (September 29, 2023)
+
+* Don't delete existing front matter when sharing a gist with the "Include front matter in gists" option disabled
+
 # v1.3.0 (September 28, 2023)
 
 * Add optional "Enable auto-saving Gists after edit" option, which updates your Gists on GitHub when you save changes (thanks @Jamalam360!)
