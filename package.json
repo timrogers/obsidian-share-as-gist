@@ -29,7 +29,7 @@
 		"typescript": "5.2.2"
 	},
 	"dependencies": {
-		"@octokit/rest": "^20.0.1",
+		"@octokit/rest": "^20.0.2",
 		"gray-matter": "^4.0.3"
 	}
 }
