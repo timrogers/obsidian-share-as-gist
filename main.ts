@@ -77,16 +77,16 @@ const shareGistEditorCallback =
     }
 
     const editor = view.editor;
-    const rawContent = editor.getValue();
+    const originalContent = editor.getValue();
     const filename = view.file.name;
 
-    const existingSharedGists = getSharedGistsForFile(rawContent).filter(
+    const existingSharedGists = getSharedGistsForFile(originalContent).filter(
       (sharedGist) => sharedGist.isPublic === isPublic,
     );
 
-    const content = includeFrontMatter
-      ? rawContent
-      : stripFrontMatter(rawContent);
+    const gistContent = includeFrontMatter
+      ? originalContent
+      : stripFrontMatter(originalContent);
 
     if (enableUpdatingGistsAfterCreation && existingSharedGists.length) {
       new ShareAsGistSelectExistingGistModal(
@@ -96,11 +96,15 @@ const shareGistEditorCallback =
           let result;
 
           if (sharedGist) {
-            result = await updateGist({ sharedGist, accessToken, content });
+            result = await updateGist({
+              sharedGist,
+              accessToken,
+              content: gistContent,
+            });
           } else {
             result = await createGist({
               filename,
-              content,
+              content: gistContent,
               accessToken,
               isPublic,
             });
@@ -113,7 +117,7 @@ const shareGistEditorCallback =
             );
             const updatedContent = upsertSharedGistForFile(
               result.sharedGist,
-              rawContent,
+              originalContent,
             );
             editor.setValue(updatedContent);
           } else {
@@ -124,7 +128,7 @@ const shareGistEditorCallback =
     } else {
       const result = await createGist({
         filename,
-        content,
+        content: gistContent,
         accessToken,
         isPublic,
       });
@@ -138,13 +142,10 @@ const shareGistEditorCallback =
         if (enableUpdatingGistsAfterCreation) {
           const updatedContent = upsertSharedGistForFile(
             result.sharedGist,
-            rawContent,
+            originalContent,
           );
 
           app.vault.modify(view.file, updatedContent);
-          editor.refresh();
-        } else {
-          app.vault.modify(view.file, content);
           editor.refresh();
         }
       } else {
