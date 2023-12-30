@@ -22,23 +22,24 @@ export const upsertSharedGistForFile = (
   fileContents: string,
 ): string => {
   const { data, content } = matter(fileContents);
-  const existingSharedGists = (data.gists || []) as SharedGist[];
-
-  const matchingGist = existingSharedGists.find(
-    (existingSharedGist) => existingSharedGist.id === sharedGist.id,
-  );
-
-  if (matchingGist) {
-    const otherGists = existingSharedGists.filter(
-      (existingSharedGist) => existingSharedGist !== matchingGist,
-    );
-
-    const gists = [...otherGists, sharedGist];
-    const updatedData = { ...data, gists };
-    return matter.stringify(content, updatedData);
-  } else {
-    const gists = [...existingSharedGists, sharedGist];
-    const updatedData = { ...data, gists };
-    return matter.stringify(content, updatedData);
+  
+  // Initialize the gists data structure if it doesn't exist
+  if (!data.gists) {
+    data.gists = {};
   }
+
+  // Extracting each sub-property of the shared gist
+  const gistKey = `gist-${sharedGist.id}`;
+  data.gists[gistKey] = {
+    id: sharedGist.id,
+    url: sharedGist.url,
+    createdAt: sharedGist.createdAt,
+    updatedAt: sharedGist.updatedAt,
+    filename: sharedGist.filename,
+    isPublic: sharedGist.isPublic
+  };
+
+  // Reconstructing the front matter with updated gist data
+  const updatedData = { ...data };
+  return matter.stringify(content, updatedData);
 };
