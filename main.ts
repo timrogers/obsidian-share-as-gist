@@ -39,6 +39,11 @@ interface ShareGistEditorCallbackParams {
   plugin: ShareAsGistPlugin;
 }
 
+interface CopyGistUrlEditorCallbackParams {
+  app: App;
+  plugin: ShareAsGistPlugin;
+}
+
 interface DocumentChangedAutoSaveCallbackParams {
   app: App;
   plugin: ShareAsGistPlugin;
@@ -54,6 +59,53 @@ const getLatestSettings = async (
 };
 
 const stripFrontMatter = (content: string): string => matter(content).content;
+
+const copyGitUrlEditorCallback =
+  (opts: CopyGistUrlEditorCallbackParams) => async () => {
+    const { app, plugin } = opts;
+
+    const { enableUpdatingGistsAfterCreation } =
+      await getLatestSettings(plugin);
+
+    if (!enableUpdatingGistsAfterCreation) {
+      return new Notice(
+        "You need to enable 'Update gists after creation' in Settings to use this command.",
+      );
+    }
+
+    const view = app.workspace.getActiveViewOfType(MarkdownView);
+
+    if (!view) {
+      return new Notice('No active file');
+    }
+
+    const editor = view.editor;
+    const originalContent = editor.getValue();
+
+    const existingSharedGists = getSharedGistsForFile(originalContent);
+
+    if (existingSharedGists.length === 0) {
+      return new Notice(
+        'You must share this note as a gist before you can copy its URL to the clipboard.',
+      );
+    }
+
+    if (existingSharedGists.length > 1) {
+      new SelectExistingGistModal(
+        app,
+        existingSharedGists,
+        false,
+        async (sharedGist) => {
+          navigator.clipboard.writeText(sharedGist.url);
+          new Notice('Copied gist URL to clipboard.');
+        },
+      ).open();
+    } else {
+      const sharedGist = existingSharedGists[0];
+      navigator.clipboard.writeText(sharedGist.url);
+      return new Notice('Copied gist URL to clipboard.');
+    }
+  };
 
 const shareGistEditorCallback =
   (opts: ShareGistEditorCallbackParams) => async () => {
@@ -89,9 +141,10 @@ const shareGistEditorCallback =
       : stripFrontMatter(originalContent);
 
     if (enableUpdatingGistsAfterCreation && existingSharedGists.length) {
-      new ShareAsGistSelectExistingGistModal(
+      new SelectExistingGistModal(
         app,
         existingSharedGists,
+        true,
         async (sharedGist) => {
           let result;
 
@@ -220,6 +273,15 @@ export default class ShareAsGistPlugin extends Plugin {
       }),
     });
 
+    this.addCommand({
+      id: 'copy-gist-url',
+      name: 'Copy GitHub.com gist URL',
+      callback: copyGitUrlEditorCallback({
+        plugin: this,
+        app: this.app,
+      }),
+    });
+
     this.addModifyCallback();
 
     // This adds a settings tab so the user can configure various aspects of the plugin
@@ -275,22 +337,29 @@ export default class ShareAsGistPlugin extends Plugin {
   }
 }
 
-class ShareAsGistSelectExistingGistModal extends SuggestModal<SharedGist> {
+class SelectExistingGistModal extends SuggestModal<SharedGist> {
   sharedGists: SharedGist[];
+  allowCreatingNewGist: boolean;
   onSubmit: (sharedGist: SharedGist | null) => Promise<void>;
 
   constructor(
     app: App,
     sharedGists: SharedGist[],
+    allowCreatingNewGist: boolean,
     onSubmit: (sharedGist: SharedGist) => Promise<void>,
   ) {
     super(app);
     this.sharedGists = sharedGists;
+    this.allowCreatingNewGist = allowCreatingNewGist;
     this.onSubmit = onSubmit;
   }
 
   getSuggestions(): Array<SharedGist | null> {
-    return this.sharedGists.concat(null);
+    if (this.allowCreatingNewGist) {
+      return this.sharedGists.concat(null);
+    } else {
+      return this.sharedGists;
+    }
   }
 
   renderSuggestion(sharedGist: SharedGist | null, el: HTMLElement) {
