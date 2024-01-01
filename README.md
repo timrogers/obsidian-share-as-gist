@@ -4,12 +4,12 @@ This plugin for Obsidian (https://obsidian.md) allows you to share your notes as
 
 You can share your notes privately (i.e. only people with the link can see the note) or publicly (i.e. the note is visible on your profile).
 
-Once you've create a gist, if you make changes to your note (for example responding to feedback), you can update your existing gist straight from Obsidian.
+Once you've create a gist, if you make changes to your note (for example responding to feedback), you can update your existing gist straight from Obsidian - or even configure this to happen automatically every time you save.
 
 ## Usage
 
 1. [Install the plugin](https://obsidian.md/plugins?id=obsidian-share-as-gist).
-2. [Create a GitHub personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) with the `gist` scope, and copy it to your clipboard.
+2. [Create a GitHub personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token). You can use a classic personal access token (PAT) with the `gist` scope, or a new fine-grained token with read-write access to your Gists.
 
 <img width="636" alt="Screenshot 2022-06-09 at 09 47 43" src="https://user-images.githubusercontent.com/116134/172805660-4e563a93-a042-4aa7-8b48-db0c501aac14.png">
 
@@ -23,11 +23,18 @@ Once you've create a gist, if you make changes to your note (for example respond
 
 <img width="770" alt="Screenshot 2022-07-21 at 09 12 16" src="https://user-images.githubusercontent.com/116134/180164154-02817121-e88a-419d-9528-9be58212ed9c.png">
 
-6. Make a change to your note, and the change will be automatically reflected in your gist. This can be disabled with the "Enable Auto-saving" option (in which case you can run the command from step 5 again to manually update the gist).
+6. Make a change to your note.
 
-To enable existing gists to be updated, by default, extra YAML front matter is added to your notes. You can turn this off by disabling the "Enable updating gists after creation" setting.
+7. If the "Enable auto-saving Gists after edit" setting is turned on, your changes will automatically be reflected in your gist. If not, you can use the "Share as [public|private] gist on GitHub.com" command" again to update your gist, or create a fresh one. 
 
-By default, any YAML front matter will not be included in your gists when they are shared. You can change that by toggling the "Include front matter in gists" setting.
+8. If you want to get the URL of your gist after creating it, open the Command Palette and type "gist". Pick the "Copy GitHub.com gist URL" command. If you have multiple gists for your note, you'll have to pick which one you want the URL for.
+
+## Customisable settings
+
+* __Enable updating gists after creation__ (*enabled by default*): Allow gists to be updated after creation. To enable this to work, information about the gists you create will be stored on notes as  front matter (properties).
+* __Include front matter in gists__ (*disabled by default*): Whether your gists should include frontmatter (properties). If this is disabled, the front matter will be stripped from your gists.
+* __Enable auto-saving Gists after edit__ (*disabled by default*): Whether your gists should be automatically updated when you save your note. If this is disabled, you can update your gists automatically with the normal "share" command.
+* __Enable auto-save notice__ (*disabled by default*): Whether a notice should be displayed when your gists are automatically updated. This option is only relevant if the "Enable auto-saving Gists after edit" option above is turned on.
 
 ## Securing your GitHub personal access token
 
@@ -35,7 +42,7 @@ Your GitHub access token will be stored in Obsidian's `localStorage`.
 
 This means that it will not be stored in a file and will not be backed up or synced with the rest of your Vault. But it is theoretically possible for other Obsidian plugins to access it.
 
-For your security, you should make sure that you give your personal access token the lowest possible permissions - just the `gist` scope is enough. This will mean that your token will not have access to your code or other sensitive data.
+For your security, you should make sure that you give your personal access token the lowest possible permissions. This will mean that your token will not have access to your code or other sensitive data.
 
 ## Contributing
 
