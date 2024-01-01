@@ -1,3 +1,7 @@
+# v1.4.0 (January 1, 2024)
+
+* Add new "Copy GitHub.com gist URL" command for copying the gist URL of the current note to the clipboard
+
 # v1.3.1 (September 29, 2023)
 
 * Don't delete existing front matter when sharing a gist with the "Include front matter in gists" option disabled
