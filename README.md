@@ -23,9 +23,12 @@ Once you've create a gist, if you make changes to your note (for example respond
 
 <img width="770" alt="Screenshot 2022-07-21 at 09 12 16" src="https://user-images.githubusercontent.com/116134/180164154-02817121-e88a-419d-9528-9be58212ed9c.png">
 
-6. Add a custom description for your gist and hit Enter. You can skip this and accept the default by hitting Enter immediately.
+6. Optionally, add a custom description for your gist, and hit Enter. You can skip this and accept the default by hitting Enter immediately.
 
-7. Your gist will be created, and the URL for sharing will be added to your clipboard.
+![Screenshot 2024-05-16 at 20 35 55](https://github.com/timrogers/obsidian-share-as-gist/assets/116134/04f5fe00-8fc3-4e9c-8db9-55a83d52f970)
+
+8. Your gist will be created, and the URL for sharing will be added to your clipboard.
+
 
 6. Make a change to your note.
 
