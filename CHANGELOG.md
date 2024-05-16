@@ -1,3 +1,7 @@
+# v1.5.0 (May 16, 2024)
+
+* Allow optionally setting the description when creating a gist
+
 # v1.4.0 (January 1, 2024)
 
 * Add new "Copy GitHub.com gist URL" command for copying the gist URL of the current note to the clipboard
