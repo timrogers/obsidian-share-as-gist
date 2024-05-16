@@ -2,7 +2,7 @@
 
 This plugin for Obsidian (https://obsidian.md) allows you to share your notes as [GitHub Gists](https://gist.github.com/).
 
-You can share your notes privately (i.e. only people with the link can see the note) or publicly (i.e. the note is visible on your profile).
+You can share your notes privately (i.e. only people with the link can see the note) or publicly (i.e. the note is visible on your profile). Optionally, you can also set a description for your gist.
 
 Once you've create a gist, if you make changes to your note (for example responding to feedback), you can update your existing gist straight from Obsidian - or even configure this to happen automatically every time you save.
 
@@ -19,9 +19,13 @@ Once you've create a gist, if you make changes to your note (for example respond
 
 4. Paste your access token into the "GitHub.com access token" box, then close "Settings".
 
-5. To share a note, open the Command Palette and type "gist". You'll see commands for creating a public and private link. Pick the one you want and hit enter. Your gist will be created, and the URL for sharing will be added to your clipboard.
+5. To share a note, open the Command Palette and type "gist". You'll see commands for creating a public and private link. Pick the one you want and hit enter. 
 
 <img width="770" alt="Screenshot 2022-07-21 at 09 12 16" src="https://user-images.githubusercontent.com/116134/180164154-02817121-e88a-419d-9528-9be58212ed9c.png">
+
+6. Add a custom description for your gist and hit Enter. You can skip this and accept the default by hitting Enter immediately.
+
+7. Your gist will be created, and the URL for sharing will be added to your clipboard.
 
 6. Make a change to your note.
 

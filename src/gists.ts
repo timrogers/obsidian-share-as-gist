@@ -14,6 +14,7 @@ export interface CreateGistResult {
 
 interface CreateGistOptions {
   filename: string;
+  description: string | null;
   content: string;
   isPublic: boolean;
   accessToken: string;
@@ -60,14 +61,14 @@ export const createGist = async (
   opts: CreateGistOptions,
 ): Promise<CreateGistResult> => {
   try {
-    const { filename, content, isPublic, accessToken } = opts;
+    const { accessToken, content, description, filename, isPublic } = opts;
 
     const octokit = new Octokit({
       auth: accessToken,
     });
 
     const response = await octokit.rest.gists.create({
-      description: filename,
+      description: description || filename,
       public: isPublic,
       files: {
         [filename]: { content },

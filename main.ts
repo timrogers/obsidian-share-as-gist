@@ -2,6 +2,7 @@ import {
   App,
   Debouncer,
   MarkdownView,
+  Modal,
   Notice,
   Plugin,
   PluginSettingTab,
@@ -146,64 +147,82 @@ const shareGistEditorCallback =
         existingSharedGists,
         true,
         async (sharedGist) => {
-          let result;
-
           if (sharedGist) {
-            result = await updateGist({
+            const result = await updateGist({
               sharedGist,
               accessToken,
               content: gistContent,
             });
-          } else {
-            result = await createGist({
-              filename,
-              content: gistContent,
-              accessToken,
-              isPublic,
-            });
-          }
 
-          if (result.status === CreateGistResultStatus.Succeeded) {
-            navigator.clipboard.writeText(result.sharedGist.url);
-            new Notice(
-              `Copied ${isPublic ? 'public' : 'private'} gist URL to clipboard`,
-            );
-            const updatedContent = upsertSharedGistForFile(
-              result.sharedGist,
-              originalContent,
-            );
-            editor.setValue(updatedContent);
+            if (result.status === CreateGistResultStatus.Succeeded) {
+              navigator.clipboard.writeText(result.sharedGist.url);
+              new Notice(
+                `Copied ${isPublic ? 'public' : 'private'} gist URL to clipboard`,
+              );
+              const updatedContent = upsertSharedGistForFile(
+                result.sharedGist,
+                originalContent,
+              );
+              editor.setValue(updatedContent);
+            } else {
+              new Notice(`GitHub API error: ${result.errorMessage}`);
+            }
           } else {
-            new Notice(`GitHub API error: ${result.errorMessage}`);
+            new SetGistDescriptionModal(app, filename, async (description) => {
+              const result = await createGist({
+                accessToken,
+                content: gistContent,
+                description,
+                filename,
+                isPublic,
+              });
+
+              if (result.status === CreateGistResultStatus.Succeeded) {
+                navigator.clipboard.writeText(result.sharedGist.url);
+                new Notice(
+                  `Copied ${isPublic ? 'public' : 'private'} gist URL to clipboard`,
+                );
+                const updatedContent = upsertSharedGistForFile(
+                  result.sharedGist,
+                  originalContent,
+                );
+                editor.setValue(updatedContent);
+              } else {
+                new Notice(`GitHub API error: ${result.errorMessage}`);
+              }
+            }).open();
           }
         },
       ).open();
     } else {
-      const result = await createGist({
-        filename,
-        content: gistContent,
-        accessToken,
-        isPublic,
-      });
+      new SetGistDescriptionModal(app, filename, async (description) => {
+        const result = await createGist({
+          accessToken,
+          content: gistContent,
+          description,
+          filename,
+          isPublic,
+        });
 
-      if (result.status === CreateGistResultStatus.Succeeded) {
-        navigator.clipboard.writeText(result.sharedGist.url);
-        new Notice(
-          `Copied ${isPublic ? 'public' : 'private'} gist URL to clipboard`,
-        );
-
-        if (enableUpdatingGistsAfterCreation) {
-          const updatedContent = upsertSharedGistForFile(
-            result.sharedGist,
-            originalContent,
+        if (result.status === CreateGistResultStatus.Succeeded) {
+          navigator.clipboard.writeText(result.sharedGist.url);
+          new Notice(
+            `Copied ${isPublic ? 'public' : 'private'} gist URL to clipboard`,
           );
 
-          app.vault.modify(view.file, updatedContent);
-          editor.refresh();
+          if (enableUpdatingGistsAfterCreation) {
+            const updatedContent = upsertSharedGistForFile(
+              result.sharedGist,
+              originalContent,
+            );
+
+            app.vault.modify(view.file, updatedContent);
+            editor.refresh();
+          }
+        } else {
+          new Notice(`GitHub API error: ${result.errorMessage}`);
         }
-      } else {
-        new Notice(`GitHub API error: ${result.errorMessage}`);
-      }
+      }).open();
     }
   };
 
@@ -375,6 +394,63 @@ class SelectExistingGistModal extends SuggestModal<SharedGist> {
 
   onChooseSuggestion(sharedGist: SharedGist | null) {
     this.onSubmit(sharedGist).then(() => this.close());
+  }
+}
+
+class SetGistDescriptionModal extends Modal {
+  description: string | null = null;
+  onSubmit: (description: string | null) => void;
+
+  constructor(
+    app: App,
+    filename: string,
+    onSubmit: (description: string | null) => void,
+  ) {
+    super(app);
+    this.description = filename;
+    this.onSubmit = onSubmit;
+  }
+
+  onOpen() {
+    const { contentEl } = this;
+
+    contentEl.createEl('h1', { text: 'Set a description for your gist' });
+    contentEl.createEl('p', {
+      text: 'Hit the Return key to continue',
+      attr: { style: 'font-style: italic' },
+    });
+
+    new Setting(contentEl).setName('Description').addTextArea((text) => {
+      text.inputEl.setCssStyles({ width: '100%' });
+
+      text.setValue(this.description).onChange((value) => {
+        this.description = value;
+      });
+    });
+
+    new Setting(contentEl).addButton((btn) =>
+      btn
+        .setButtonText('Create gist')
+        .setCta()
+        .onClick(() => {
+          this.close();
+          this.onSubmit(this.description);
+        }),
+    );
+
+    this.scope.register([], 'Enter', (evt: KeyboardEvent) => {
+      if (evt.isComposing) {
+        return;
+      }
+
+      this.close();
+      this.onSubmit(this.description);
+    });
+  }
+
+  onClose() {
+    const { contentEl } = this;
+    contentEl.empty();
   }
 }
 
