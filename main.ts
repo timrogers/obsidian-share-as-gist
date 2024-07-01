@@ -61,7 +61,7 @@ const getLatestSettings = async (
 
 const stripFrontMatter = (content: string): string => matter(content).content;
 
-const copyGitUrlEditorCallback =
+const copyGistUrlEditorCallback =
   (opts: CopyGistUrlEditorCallbackParams) => async () => {
     const { app, plugin } = opts;
 
@@ -295,7 +295,7 @@ export default class ShareAsGistPlugin extends Plugin {
     this.addCommand({
       id: 'copy-gist-url',
       name: 'Copy GitHub.com gist URL',
-      callback: copyGitUrlEditorCallback({
+      callback: copyGistUrlEditorCallback({
         plugin: this,
         app: this.app,
       }),
