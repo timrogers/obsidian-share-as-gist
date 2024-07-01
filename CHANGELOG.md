@@ -1,3 +1,7 @@
+# v1.6.0 (July 1, 2024)
+
+* Add new "Open gist on GitHub.com" command for opening your shared gist in your browser
+
 # v1.5.0 (May 16, 2024)
 
 * Allow optionally setting the description when creating a gist
