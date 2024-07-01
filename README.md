@@ -36,6 +36,8 @@ Once you've create a gist, if you make changes to your note (for example respond
 
 8. If you want to get the URL of your gist after creating it, open the Command Palette and type "gist". Pick the "Copy GitHub.com gist URL" command. If you have multiple gists for your note, you'll have to pick which one you want the URL for.
 
+9. To open your gist after creating it, open the Command Palette and find the "Open gist on GitHub.com" command.  If you have multiple gists for your note, you'll have to pick which one you want to open.
+
 ## Customisable settings
 
 * __Enable updating gists after creation__ (*enabled by default*): Allow gists to be updated after creation. To enable this to work, information about the gists you create will be stored on notes as  front matter (properties).
