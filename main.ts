@@ -498,6 +498,8 @@ class SetGistDescriptionModal extends Modal {
     );
 
     this.scope.register([], 'Enter', (evt: KeyboardEvent) => {
+      evt.preventDefault();
+
       if (evt.isComposing) {
         return;
       }
