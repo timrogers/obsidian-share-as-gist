@@ -1,3 +1,8 @@
+
+# v1.6.1 (July 11, 2024)
+
+* Don't insert extra lines in the note when hitting Enter in the "Set a description for your gist" modal
+
 # v1.6.0 (July 1, 2024)
 
 * Add new "Open gist on GitHub.com" command for opening your shared gist in your browser
