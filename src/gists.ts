@@ -18,22 +18,25 @@ interface CreateGistOptions {
   content: string;
   isPublic: boolean;
   accessToken: string;
+  baseUrl: string | null;
 }
 
 interface UpdateGistOptions {
   sharedGist: SharedGist;
   content: string;
   accessToken: string;
+  baseUrl: string | null;
 }
 
 export const updateGist = async (
   opts: UpdateGistOptions,
 ): Promise<CreateGistResult> => {
-  const { accessToken, sharedGist, content } = opts;
+  const { accessToken, baseUrl, sharedGist, content } = opts;
 
   try {
     const octokit = new Octokit({
       auth: accessToken,
+      baseUrl: baseUrl,
     });
 
     const response = await octokit.rest.gists.update({
@@ -61,10 +64,12 @@ export const createGist = async (
   opts: CreateGistOptions,
 ): Promise<CreateGistResult> => {
   try {
-    const { accessToken, content, description, filename, isPublic } = opts;
+    const { accessToken, baseUrl, content, description, filename, isPublic } =
+      opts;
 
     const octokit = new Octokit({
       auth: accessToken,
+      baseUrl: baseUrl,
     });
 
     const response = await octokit.rest.gists.create({

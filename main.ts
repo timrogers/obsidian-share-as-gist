@@ -13,7 +13,12 @@ import {
 } from 'obsidian';
 import matter from 'gray-matter';
 import { CreateGistResultStatus, createGist, updateGist } from 'src/gists';
-import { getAccessToken, setAccessToken } from './src/storage';
+import {
+  getAccessToken,
+  getBaseUrl,
+  setAccessToken,
+  setBaseUrl,
+} from './src/storage';
 import {
   SharedGist,
   getSharedGistsForFile,
@@ -163,6 +168,7 @@ const shareGistEditorCallback =
     const { isPublic, app, plugin } = opts;
 
     const accessToken = getAccessToken();
+    const baseUrl = getBaseUrl();
 
     const { enableUpdatingGistsAfterCreation, includeFrontMatter } =
       await getLatestSettings(plugin);
@@ -199,6 +205,7 @@ const shareGistEditorCallback =
         async (sharedGist) => {
           if (sharedGist) {
             const result = await updateGist({
+              baseUrl,
               sharedGist,
               accessToken,
               content: gistContent,
@@ -220,6 +227,7 @@ const shareGistEditorCallback =
           } else {
             new SetGistDescriptionModal(app, filename, async (description) => {
               const result = await createGist({
+                baseUrl,
                 accessToken,
                 content: gistContent,
                 description,
@@ -247,6 +255,7 @@ const shareGistEditorCallback =
     } else {
       new SetGistDescriptionModal(app, filename, async (description) => {
         const result = await createGist({
+          baseUrl,
           accessToken,
           content: gistContent,
           description,
@@ -281,6 +290,7 @@ const documentChangedAutoSaveCallback = async (
 ) => {
   const { plugin, file, content: rawContent } = opts;
   const accessToken = getAccessToken();
+  const baseUrl = getBaseUrl();
 
   const { includeFrontMatter, showAutoSaveNotice } =
     await getLatestSettings(plugin);
@@ -299,7 +309,12 @@ const documentChangedAutoSaveCallback = async (
 
   if (existingSharedGists.length) {
     for (const sharedGist of existingSharedGists) {
-      const result = await updateGist({ sharedGist, accessToken, content });
+      const result = await updateGist({
+        baseUrl,
+        sharedGist,
+        accessToken,
+        content,
+      });
       if (result.status === CreateGistResultStatus.Succeeded) {
         const updatedContent = upsertSharedGistForFile(
           result.sharedGist,
@@ -527,6 +542,7 @@ class ShareAsGistSettingTab extends PluginSettingTab {
     const { containerEl } = this;
 
     const accessToken = getAccessToken();
+    const baseUrl = getBaseUrl();
 
     containerEl.empty();
 
@@ -542,6 +558,18 @@ class ShareAsGistSettingTab extends PluginSettingTab {
           .setPlaceholder('Your personal access token')
           .setValue(accessToken)
           .onChange(setAccessToken),
+      );
+
+    new Setting(containerEl)
+      .setName('GitHub REST API base URL')
+      .setDesc(
+        'The URL used to make requests to GitHub REST API. Required for GitHub enterprise.',
+      )
+      .addText((text) =>
+        text
+          .setPlaceholder('https://api.github.com')
+          .setValue(baseUrl)
+          .onChange(setBaseUrl),
       );
 
     new Setting(containerEl)
