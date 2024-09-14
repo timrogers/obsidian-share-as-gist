@@ -19,24 +19,26 @@ Once you've create a gist, if you make changes to your note (for example respond
 
 4. Paste your access token into the "GitHub.com access token" box, then close "Settings".
 
-5. To share a note, open the Command Palette and type "gist". You'll see commands for creating a public and private link. Pick the one you want and hit enter. 
+5. Optionally, update the GitHub REST API base URL. Required for GitHub enterprise.
+
+6. To share a note, open the Command Palette and type "gist". You'll see commands for creating a public and private link. Pick the one you want and hit enter. 
 
 <img width="770" alt="Screenshot 2022-07-21 at 09 12 16" src="https://user-images.githubusercontent.com/116134/180164154-02817121-e88a-419d-9528-9be58212ed9c.png">
 
-6. Optionally, add a custom description for your gist, and hit Enter. You can skip this and accept the default by hitting Enter immediately.
+7. Optionally, add a custom description for your gist, and hit Enter. You can skip this and accept the default by hitting Enter immediately.
 
 ![Screenshot 2024-05-16 at 20 35 55](https://github.com/timrogers/obsidian-share-as-gist/assets/116134/04f5fe00-8fc3-4e9c-8db9-55a83d52f970)
 
 8. Your gist will be created, and the URL for sharing will be added to your clipboard.
 
 
-6. Make a change to your note.
+9. Make a change to your note.
 
-7. If the "Enable auto-saving Gists after edit" setting is turned on, your changes will automatically be reflected in your gist. If not, you can use the "Share as [public|private] gist on GitHub.com" command" again to update your gist, or create a fresh one. 
+10. If the "Enable auto-saving Gists after edit" setting is turned on, your changes will automatically be reflected in your gist. If not, you can use the "Share as [public|private] gist on GitHub.com" command" again to update your gist, or create a fresh one. 
 
-8. If you want to get the URL of your gist after creating it, open the Command Palette and type "gist". Pick the "Copy GitHub.com gist URL" command. If you have multiple gists for your note, you'll have to pick which one you want the URL for.
+11. If you want to get the URL of your gist after creating it, open the Command Palette and type "gist". Pick the "Copy GitHub.com gist URL" command. If you have multiple gists for your note, you'll have to pick which one you want the URL for.
 
-9. To open your gist after creating it, open the Command Palette and find the "Open gist on GitHub.com" command.  If you have multiple gists for your note, you'll have to pick which one you want to open.
+12. To open your gist after creating it, open the Command Palette and find the "Open gist on GitHub.com" command.  If you have multiple gists for your note, you'll have to pick which one you want to open.
 
 ## Customisable settings
 
