@@ -1,4 +1,5 @@
 import matter from 'gray-matter';
+import { DOTCOM_BASE_URL, Target } from './gists';
 
 export interface SharedGist {
   id: string;
@@ -7,14 +8,32 @@ export interface SharedGist {
   createdAt: string;
   updatedAt: string;
   filename: string;
+  baseUrl: string;
 }
 
-export const getSharedGistsForFile = (fileContents: string): SharedGist[] => {
+export const getBaseUrlForSharedGist = (sharedGist: SharedGist): string =>
+  sharedGist.baseUrl || DOTCOM_BASE_URL;
+
+export const getTargetForSharedGist = (sharedGist: SharedGist): Target =>
+  getBaseUrlForSharedGist(sharedGist) === DOTCOM_BASE_URL
+    ? Target.Dotcom
+    : Target.GitHubEnterpriseServer;
+
+export const getSharedGistsForFile = (
+  fileContents: string,
+  target?: Target,
+): SharedGist[] => {
   const { data } = matter(fileContents);
 
   const gists = data.gists || [];
 
-  return gists as SharedGist[];
+  return (gists as SharedGist[]).filter((gist) => {
+    if (typeof target === 'undefined') {
+      return true;
+    }
+
+    return getTargetForSharedGist(gist) === target;
+  });
 };
 
 export const upsertSharedGistForFile = (
