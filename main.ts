@@ -1,6 +1,8 @@
 import {
   App,
   Debouncer,
+  Editor,
+  MarkdownFileInfo,
   MarkdownView,
   Modal,
   Notice,
@@ -12,11 +14,26 @@ import {
   debounce,
 } from 'obsidian';
 import matter from 'gray-matter';
-import { CreateGistResultStatus, createGist, updateGist } from 'src/gists';
-import { getAccessToken, setAccessToken } from './src/storage';
+import {
+  CreateGistResultStatus,
+  Target,
+  createGist,
+  updateGist,
+} from 'src/gists';
+import {
+  getDotcomAccessToken,
+  getGhesAccessToken,
+  getGhesBaseUrl,
+  isDotcomEnabled,
+  isGhesEnabled,
+  setDotcomAccessToken,
+  setGhesAccessToken,
+  setGhesBaseUrl,
+} from './src/storage';
 import {
   SharedGist,
   getSharedGistsForFile,
+  getTargetForSharedGist,
   upsertSharedGistForFile,
 } from './src/shared-gists';
 
@@ -35,9 +52,10 @@ const DEFAULT_SETTINGS: ShareAsGistSettings = {
 };
 
 interface ShareGistEditorCallbackParams {
-  isPublic: boolean;
   app: App;
+  isPublic: boolean;
   plugin: ShareAsGistPlugin;
+  target: Target;
 }
 
 interface CopyGistUrlEditorCallbackParams {
@@ -70,15 +88,6 @@ const copyGistUrlEditorCallback =
   (opts: CopyGistUrlEditorCallbackParams) => async () => {
     const { app, plugin } = opts;
 
-    const { enableUpdatingGistsAfterCreation } =
-      await getLatestSettings(plugin);
-
-    if (!enableUpdatingGistsAfterCreation) {
-      return new Notice(
-        "You need to enable 'Update gists after creation' in Settings to use this command.",
-      );
-    }
-
     const view = app.workspace.getActiveViewOfType(MarkdownView);
 
     if (!view) {
@@ -91,9 +100,18 @@ const copyGistUrlEditorCallback =
     const existingSharedGists = getSharedGistsForFile(originalContent);
 
     if (existingSharedGists.length === 0) {
-      return new Notice(
-        'You must share this note as a gist before you can copy its URL to the clipboard.',
-      );
+      const { enableUpdatingGistsAfterCreation } =
+        await getLatestSettings(plugin);
+
+      if (!enableUpdatingGistsAfterCreation) {
+        return new Notice(
+          "You need to enable 'Update gists after creation' in Settings to use this command.",
+        );
+      } else {
+        return new Notice(
+          'You must share this note as a gist before you can copy its URL to the clipboard.',
+        );
+      }
     }
 
     if (existingSharedGists.length > 1) {
@@ -117,15 +135,6 @@ const openGistEditorCallback =
   (opts: OpenGistEditorCallbackParams) => async () => {
     const { app, plugin } = opts;
 
-    const { enableUpdatingGistsAfterCreation } =
-      await getLatestSettings(plugin);
-
-    if (!enableUpdatingGistsAfterCreation) {
-      return new Notice(
-        "You need to enable 'Update gists after creation' in Settings to use this command.",
-      );
-    }
-
     const view = app.workspace.getActiveViewOfType(MarkdownView);
 
     if (!view) {
@@ -138,9 +147,18 @@ const openGistEditorCallback =
     const existingSharedGists = getSharedGistsForFile(originalContent);
 
     if (existingSharedGists.length === 0) {
-      return new Notice(
-        'You must share this note as a gist before you can open its gist.',
-      );
+      const { enableUpdatingGistsAfterCreation } =
+        await getLatestSettings(plugin);
+
+      if (!enableUpdatingGistsAfterCreation) {
+        return new Notice(
+          "You need to enable 'Update gists after creation' in Settings to use this command.",
+        );
+      } else {
+        return new Notice(
+          'You must share this note as a gist before you can open its gist.',
+        );
+      }
     }
 
     if (existingSharedGists.length > 1) {
@@ -160,18 +178,10 @@ const openGistEditorCallback =
 
 const shareGistEditorCallback =
   (opts: ShareGistEditorCallbackParams) => async () => {
-    const { isPublic, app, plugin } = opts;
-
-    const accessToken = getAccessToken();
+    const { isPublic, app, plugin, target } = opts;
 
     const { enableUpdatingGistsAfterCreation, includeFrontMatter } =
       await getLatestSettings(plugin);
-
-    if (!accessToken) {
-      return new Notice(
-        'You need to add your GitHub personal access token in Settings.',
-      );
-    }
 
     const view = app.workspace.getActiveViewOfType(MarkdownView);
 
@@ -183,9 +193,10 @@ const shareGistEditorCallback =
     const originalContent = editor.getValue();
     const filename = view.file.name;
 
-    const existingSharedGists = getSharedGistsForFile(originalContent).filter(
-      (sharedGist) => sharedGist.isPublic === isPublic,
-    );
+    const existingSharedGists = getSharedGistsForFile(
+      originalContent,
+      target,
+    ).filter((sharedGist) => sharedGist.isPublic === isPublic);
 
     const gistContent = includeFrontMatter
       ? originalContent
@@ -200,7 +211,6 @@ const shareGistEditorCallback =
           if (sharedGist) {
             const result = await updateGist({
               sharedGist,
-              accessToken,
               content: gistContent,
             });
 
@@ -215,12 +225,12 @@ const shareGistEditorCallback =
               );
               editor.setValue(updatedContent);
             } else {
-              new Notice(`GitHub API error: ${result.errorMessage}`);
+              new Notice(`Error: ${result.errorMessage}`);
             }
           } else {
             new SetGistDescriptionModal(app, filename, async (description) => {
               const result = await createGist({
-                accessToken,
+                target,
                 content: gistContent,
                 description,
                 filename,
@@ -238,7 +248,7 @@ const shareGistEditorCallback =
                 );
                 editor.setValue(updatedContent);
               } else {
-                new Notice(`GitHub API error: ${result.errorMessage}`);
+                new Notice(`Error: ${result.errorMessage}`);
               }
             }).open();
           }
@@ -247,7 +257,7 @@ const shareGistEditorCallback =
     } else {
       new SetGistDescriptionModal(app, filename, async (description) => {
         const result = await createGist({
-          accessToken,
+          target,
           content: gistContent,
           description,
           filename,
@@ -280,16 +290,9 @@ const documentChangedAutoSaveCallback = async (
   opts: DocumentChangedAutoSaveCallbackParams,
 ) => {
   const { plugin, file, content: rawContent } = opts;
-  const accessToken = getAccessToken();
 
   const { includeFrontMatter, showAutoSaveNotice } =
     await getLatestSettings(plugin);
-
-  if (!accessToken) {
-    return new Notice(
-      'You need to add your GitHub personal access token in Settings.',
-    );
-  }
 
   const existingSharedGists = getSharedGistsForFile(rawContent);
 
@@ -299,7 +302,7 @@ const documentChangedAutoSaveCallback = async (
 
   if (existingSharedGists.length) {
     for (const sharedGist of existingSharedGists) {
-      const result = await updateGist({ sharedGist, accessToken, content });
+      const result = await updateGist({ sharedGist, content });
       if (result.status === CreateGistResultStatus.Succeeded) {
         const updatedContent = upsertSharedGistForFile(
           result.sharedGist,
@@ -307,13 +310,19 @@ const documentChangedAutoSaveCallback = async (
         );
         await file.vault.adapter.write(file.path, updatedContent);
         if (showAutoSaveNotice) {
-          new Notice('Gist updated');
+          return new Notice('Gist updated');
         }
       } else {
-        new Notice(`GitHub API error: ${result.errorMessage}`);
+        return new Notice(`Error: ${result.errorMessage}`);
       }
     }
   }
+};
+
+const hasAtLeastOneSharedGist = (editor: Editor): boolean => {
+  const originalContent = editor.getValue();
+  const existingSharedGists = getSharedGistsForFile(originalContent);
+  return existingSharedGists.length > 0;
 };
 
 export default class ShareAsGistPlugin extends Plugin {
@@ -322,48 +331,108 @@ export default class ShareAsGistPlugin extends Plugin {
   async onload() {
     await this.loadSettings();
 
-    this.addCommand({
-      id: 'share-as-public-dotcom-gist',
-      name: 'Share as public gist on GitHub.com',
-      editorCallback: shareGistEditorCallback({
-        plugin: this,
-        app: this.app,
-        isPublic: true,
-      }),
-    });
+    this.registerCommands();
+
+    this.addModifyCallback();
+
+    // This adds a settings tab so the user can configure various aspects of the plugin
+    this.addSettingTab(new ShareAsGistSettingTab(this.app, this));
+  }
+
+  addEditorCommandWithCheck(opts: {
+    id: string;
+    name: string;
+    callback: (editor: Editor, ctx: MarkdownView | MarkdownFileInfo) => void;
+    performCheck: (
+      editor: Editor,
+      ctx: MarkdownView | MarkdownFileInfo,
+    ) => boolean;
+  }) {
+    const { id, name, performCheck, callback } = opts;
 
     this.addCommand({
+      id,
+      name,
+      editorCheckCallback: (checking, editor, ctx) => {
+        if (performCheck(editor, ctx)) {
+          if (checking) {
+            return true;
+          }
+
+          callback(editor, ctx);
+        }
+      },
+    });
+  }
+
+  registerCommands() {
+    this.addEditorCommandWithCheck({
       id: 'share-as-private-dotcom-gist',
       name: 'Share as private gist on GitHub.com',
       callback: shareGistEditorCallback({
         plugin: this,
         app: this.app,
         isPublic: false,
+        target: Target.Dotcom,
       }),
+      performCheck: isDotcomEnabled,
     });
 
-    this.addCommand({
+    this.addEditorCommandWithCheck({
+      id: 'share-as-public-dotcom-gist',
+      name: 'Share as public gist on GitHub.com',
+      callback: shareGistEditorCallback({
+        plugin: this,
+        app: this.app,
+        isPublic: true,
+        target: Target.Dotcom,
+      }),
+      performCheck: isDotcomEnabled,
+    });
+
+    this.addEditorCommandWithCheck({
+      id: 'share-as-private-ghes-gist',
+      name: 'Share as private gist on GitHub Enterprise Server',
+      callback: shareGistEditorCallback({
+        plugin: this,
+        app: this.app,
+        isPublic: false,
+        target: Target.GitHubEnterpriseServer,
+      }),
+      performCheck: isGhesEnabled,
+    });
+
+    this.addEditorCommandWithCheck({
+      id: 'share-as-public-ghes-gist',
+      name: 'Share as public gist on GitHub Enterprise Server',
+      callback: shareGistEditorCallback({
+        plugin: this,
+        app: this.app,
+        isPublic: true,
+        target: Target.GitHubEnterpriseServer,
+      }),
+      performCheck: isGhesEnabled,
+    });
+
+    this.addEditorCommandWithCheck({
       id: 'copy-gist-url',
-      name: 'Copy GitHub.com gist URL',
+      name: 'Copy gist URL',
       callback: copyGistUrlEditorCallback({
         plugin: this,
         app: this.app,
       }),
+      performCheck: hasAtLeastOneSharedGist,
     });
 
-    this.addCommand({
+    this.addEditorCommandWithCheck({
       id: 'open-gist-url',
-      name: 'Open gist on GitHub.com',
+      name: 'Open gist',
       callback: openGistEditorCallback({
         plugin: this,
         app: this.app,
       }),
+      performCheck: hasAtLeastOneSharedGist,
     });
-
-    this.addModifyCallback();
-
-    // This adds a settings tab so the user can configure various aspects of the plugin
-    this.addSettingTab(new ShareAsGistSettingTab(this.app, this));
   }
 
   addModifyCallback() {
@@ -444,9 +513,17 @@ class SelectExistingGistModal extends SuggestModal<SharedGist> {
     if (sharedGist === null) {
       el.createEl('div', { text: 'Create new gist' });
     } else {
+      const targetLabel =
+        getTargetForSharedGist(sharedGist) === Target.Dotcom
+          ? 'GitHub.com'
+          : new URL(sharedGist.baseUrl).host;
+
       el.createEl('div', {
-        text: sharedGist.isPublic ? 'Public gist' : 'Private gist',
+        text:
+          (sharedGist.isPublic ? 'Public gist' : 'Private gist') +
+          ` on ${targetLabel}`,
       });
+
       el.createEl('small', { text: `Created at ${sharedGist.createdAt}` });
     }
   }
@@ -526,23 +603,64 @@ class ShareAsGistSettingTab extends PluginSettingTab {
   display(): void {
     const { containerEl } = this;
 
-    const accessToken = getAccessToken();
+    const dotcomAccessToken = getDotcomAccessToken();
+    const ghesBaseUrl = getGhesBaseUrl();
+    const ghesAccessToken = getGhesAccessToken();
 
     containerEl.empty();
 
     containerEl.createEl('h2', { text: 'Share as Gist' });
 
+    containerEl.createEl('h3', { text: 'GitHub.com' });
+
     new Setting(containerEl)
-      .setName('GitHub.com personal access token')
+      .setName('Personal access token')
       .setDesc(
         'An access token for GitHub.com with permission to write gists. You can create one from "Settings" in your GitHub account.',
       )
       .addText((text) =>
         text
           .setPlaceholder('Your personal access token')
-          .setValue(accessToken)
-          .onChange(setAccessToken),
+          .setValue(dotcomAccessToken)
+          .onChange(async (value) => {
+            setDotcomAccessToken(value);
+            await this.plugin.saveSettings();
+          }),
       );
+
+    containerEl.createEl('h3', { text: 'GitHub Enterprise Server' });
+
+    new Setting(containerEl)
+      .setName('Base URL')
+      .setDesc(
+        'The base URL for the GitHub REST API on your GitHub Enterprise Server instance. This usually ends with `/api/v3`.',
+      )
+      .addText((text) =>
+        text
+          .setPlaceholder('https://github.example.com/api/v3')
+          .setValue(ghesBaseUrl)
+          .onChange(async (value) => {
+            setGhesBaseUrl(value);
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName('Personal access token')
+      .setDesc(
+        'An access token for your GitHub Enterprise Server instance with permission to write gists. You can create one from "Settings" in your GitHub account.',
+      )
+      .addText((text) =>
+        text
+          .setPlaceholder('Your personal access token')
+          .setValue(ghesAccessToken)
+          .onChange(async (value) => {
+            setGhesAccessToken(value);
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    containerEl.createEl('h3', { text: 'Advanced options' });
 
     new Setting(containerEl)
       .setName('Enable updating gists after creation')

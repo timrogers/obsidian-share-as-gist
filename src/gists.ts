@@ -1,5 +1,13 @@
 import { Octokit } from '@octokit/rest';
-import { SharedGist } from './shared-gists';
+import { getBaseUrlForSharedGist, SharedGist } from './shared-gists';
+import { getAccessTokenForBaseUrl, getTargetBaseUrl } from './storage';
+
+export enum Target {
+  Dotcom = 'dotcom',
+  GitHubEnterpriseServer = 'github_enterprise_server',
+}
+
+export const DOTCOM_BASE_URL = 'https://api.github.com';
 
 export enum CreateGistResultStatus {
   Succeeded = 'succeeded',
@@ -17,23 +25,34 @@ interface CreateGistOptions {
   description: string | null;
   content: string;
   isPublic: boolean;
-  accessToken: string;
+  target: Target;
 }
 
 interface UpdateGistOptions {
   sharedGist: SharedGist;
   content: string;
-  accessToken: string;
 }
 
 export const updateGist = async (
   opts: UpdateGistOptions,
 ): Promise<CreateGistResult> => {
-  const { accessToken, sharedGist, content } = opts;
+  const { sharedGist, content } = opts;
+
+  const baseUrl = getBaseUrlForSharedGist(sharedGist);
+  const accessToken = getAccessTokenForBaseUrl(baseUrl);
+
+  if (!accessToken) {
+    return {
+      status: CreateGistResultStatus.Failed,
+      sharedGist: sharedGist,
+      errorMessage: `No access token found for the ${baseUrl} target.`,
+    };
+  }
 
   try {
     const octokit = new Octokit({
       auth: accessToken,
+      baseUrl,
     });
 
     const response = await octokit.rest.gists.update({
@@ -61,10 +80,14 @@ export const createGist = async (
   opts: CreateGistOptions,
 ): Promise<CreateGistResult> => {
   try {
-    const { accessToken, content, description, filename, isPublic } = opts;
+    const { content, description, filename, isPublic, target } = opts;
+
+    const baseUrl = getTargetBaseUrl(target);
+    const accessToken = getAccessTokenForBaseUrl(baseUrl);
 
     const octokit = new Octokit({
       auth: accessToken,
+      baseUrl,
     });
 
     const response = await octokit.rest.gists.create({
@@ -84,6 +107,7 @@ export const createGist = async (
         updatedAt: response.data.updated_at as string,
         filename,
         isPublic,
+        baseUrl,
       },
       errorMessage: null,
     };
