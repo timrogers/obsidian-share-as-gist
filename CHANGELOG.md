@@ -1,3 +1,6 @@
+# v1.7.0 (October 6, 2024)
+
+* Add support for GitHub Enterprise Server (GHES), configured separately from GitHub.com
 
 # v1.6.1 (July 11, 2024)
 
