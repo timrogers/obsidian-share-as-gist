@@ -61,3 +61,19 @@ export const upsertSharedGistForFile = (
     return matter.stringify(content, updatedData);
   }
 };
+
+export const removeSharedGistForFile = (
+  sharedGist: SharedGist,
+  fileContents: string,
+): string => {
+  const { data, content } = matter(fileContents);
+  const existingSharedGists = (data.gists || []) as SharedGist[];
+
+  const sharedGistsWithGistRemoved = existingSharedGists.filter(
+    (existingSharedGist) => existingSharedGist.id !== sharedGist.id,
+  );
+
+  const updatedData = { ...data, gists: sharedGistsWithGistRemoved };
+  if (sharedGistsWithGistRemoved.length === 0) delete updatedData.gists;
+  return matter.stringify(content, updatedData);
+};

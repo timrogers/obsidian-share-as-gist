@@ -16,9 +16,11 @@ import {
 import matter from 'gray-matter';
 import {
   CreateGistResultStatus,
+  DeleteGistResultStatus,
   Target,
   createGist,
   updateGist,
+  deleteGist,
 } from 'src/gists';
 import {
   getDotcomAccessToken,
@@ -34,6 +36,7 @@ import {
   SharedGist,
   getSharedGistsForFile,
   getTargetForSharedGist,
+  removeSharedGistForFile,
   upsertSharedGistForFile,
 } from './src/shared-gists';
 
@@ -64,6 +67,11 @@ interface CopyGistUrlEditorCallbackParams {
 }
 
 interface OpenGistEditorCallbackParams {
+  app: App;
+  plugin: ShareAsGistPlugin;
+}
+
+interface DeleteGistEditorCallbackParams {
   app: App;
   plugin: ShareAsGistPlugin;
 }
@@ -173,6 +181,71 @@ const openGistEditorCallback =
     } else {
       const sharedGist = existingSharedGists[0];
       window.open(sharedGist.url, '_blank');
+    }
+  };
+
+const deleteGistEditorCallback =
+  (opts: DeleteGistEditorCallbackParams) => async () => {
+    const { app, plugin } = opts;
+
+    const view = app.workspace.getActiveViewOfType(MarkdownView);
+
+    if (!view) {
+      return new Notice('No active file');
+    }
+
+    const editor = view.editor;
+    const originalContent = editor.getValue();
+
+    const existingSharedGists = getSharedGistsForFile(originalContent);
+
+    if (existingSharedGists.length === 0) {
+      const { enableUpdatingGistsAfterCreation } =
+        await getLatestSettings(plugin);
+
+      if (!enableUpdatingGistsAfterCreation) {
+        return new Notice(
+          "You need to enable 'Update gists after creation' in Settings to use this command.",
+        );
+      } else {
+        return new Notice('There are no gists associated with this note.');
+      }
+    }
+
+    if (existingSharedGists.length > 1) {
+      new SelectExistingGistModal(
+        app,
+        existingSharedGists,
+        false,
+        async (sharedGist) => {
+          const result = await deleteGist({ sharedGist });
+
+          if (result.status === DeleteGistResultStatus.Succeeded) {
+            const updatedContent = removeSharedGistForFile(
+              sharedGist,
+              originalContent,
+            );
+            editor.setValue(updatedContent);
+            new Notice('Gist deleted');
+          } else {
+            new Notice(`Error: ${result.errorMessage}`);
+          }
+        },
+      ).open();
+    } else {
+      const sharedGist = existingSharedGists[0];
+      const result = await deleteGist({ sharedGist });
+
+      if (result.status === DeleteGistResultStatus.Succeeded) {
+        const updatedContent = removeSharedGistForFile(
+          sharedGist,
+          originalContent,
+        );
+        editor.setValue(updatedContent);
+        new Notice('Gist deleted');
+      } else {
+        new Notice(`Error: ${result.errorMessage}`);
+      }
     }
   };
 
@@ -428,6 +501,16 @@ export default class ShareAsGistPlugin extends Plugin {
       id: 'open-gist-url',
       name: 'Open gist',
       callback: openGistEditorCallback({
+        plugin: this,
+        app: this.app,
+      }),
+      performCheck: hasAtLeastOneSharedGist,
+    });
+
+    this.addEditorCommandWithCheck({
+      id: 'delete-gist',
+      name: 'Delete gist',
+      callback: deleteGistEditorCallback({
         plugin: this,
         app: this.app,
       }),
