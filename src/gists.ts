@@ -14,6 +14,11 @@ export enum CreateGistResultStatus {
   Failed = 'failed',
 }
 
+export enum DeleteGistResultStatus {
+  Succeeded = 'succeeded',
+  Failed = 'failed',
+}
+
 export interface CreateGistResult {
   status: CreateGistResultStatus;
   sharedGist: SharedGist | null;
@@ -31,6 +36,15 @@ interface CreateGistOptions {
 interface UpdateGistOptions {
   sharedGist: SharedGist;
   content: string;
+}
+
+interface DeleteGistOptions {
+  sharedGist: SharedGist;
+}
+
+interface DeleteGistResult {
+  status: DeleteGistResultStatus;
+  errorMessage: string | null;
 }
 
 export const updateGist = async (
@@ -71,6 +85,43 @@ export const updateGist = async (
     return {
       status: CreateGistResultStatus.Failed,
       sharedGist: sharedGist,
+      errorMessage: e.message,
+    };
+  }
+};
+
+export const deleteGist = async (
+  opts: DeleteGistOptions,
+): Promise<DeleteGistResult> => {
+  const { sharedGist } = opts;
+
+  const baseUrl = getBaseUrlForSharedGist(sharedGist);
+  const accessToken = getAccessTokenForBaseUrl(baseUrl);
+
+  if (!accessToken) {
+    return {
+      status: DeleteGistResultStatus.Failed,
+      errorMessage: `No access token found for the ${baseUrl} target.`,
+    };
+  }
+
+  try {
+    const octokit = new Octokit({
+      auth: accessToken,
+      baseUrl,
+    });
+
+    await octokit.rest.gists.delete({
+      gist_id: sharedGist.id,
+    });
+
+    return {
+      status: DeleteGistResultStatus.Succeeded,
+      errorMessage: null,
+    };
+  } catch (e) {
+    return {
+      status: DeleteGistResultStatus.Failed,
       errorMessage: e.message,
     };
   }
