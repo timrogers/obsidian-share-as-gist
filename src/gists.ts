@@ -120,9 +120,14 @@ export const deleteGist = async (
       errorMessage: null,
     };
   } catch (e) {
+    let errorMessage = 'An unknown error occurred.';
+    if (e instanceof Error) {
+      errorMessage = e.message;
+    }
+
     return {
       status: DeleteGistResultStatus.Failed,
-      errorMessage: e.message,
+      errorMessage,
     };
   }
 };
