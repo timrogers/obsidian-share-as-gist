@@ -1,3 +1,7 @@
+# v1.8.0 (January 9, 2025)
+
+* Add new "Delete gist" command for deleting a gist you've created
+
 # v1.7.0 (October 6, 2024)
 
 * Add support for GitHub Enterprise Server (GHES), configured separately from GitHub.com
