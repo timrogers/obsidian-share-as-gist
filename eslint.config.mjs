@@ -17,7 +17,7 @@ const compat = new FlatCompat({
 
 export default [
   {
-    ignores: ['**/npm node_modules', '**/build'],
+    ignores: ['**/npm node_modules', '**/build', 'main.js'],
   },
   ...compat.extends(
     'eslint:recommended',
