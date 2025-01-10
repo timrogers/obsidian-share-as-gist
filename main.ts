@@ -92,96 +92,81 @@ const getLatestSettings = async (
 
 const stripFrontMatter = (content: string): string => matter(content).content;
 
+/*
+Take an action with an existing gist, shared from the current note.
+
+If the note has exactly one gist, the callback will be called with that gist.
+If the note has more than one gist, the user will be prompted to select one, and the callback will be called with the selected gist.
+If the note has no gists, `noGistNotice` will be shown as an error message.
+If the "Enable updating gists after creation" setting is turned off, an error message will be shown.
+*/
+const withExistingSharedGist = async (
+  app: App,
+  plugin: ShareAsGistPlugin,
+  callback: (sharedGist: SharedGist) => Promise<void>,
+  noGistNotice: string,
+) => {
+  const view = app.workspace.getActiveViewOfType(MarkdownView);
+
+  if (!view) {
+    return new Notice('No active file');
+  }
+
+  const editor = view.editor;
+  const originalContent = editor.getValue();
+
+  const existingSharedGists = getSharedGistsForFile(originalContent);
+
+  if (existingSharedGists.length === 0) {
+    const { enableUpdatingGistsAfterCreation } =
+      await getLatestSettings(plugin);
+
+    if (!enableUpdatingGistsAfterCreation) {
+      return new Notice(
+        "You need to enable 'Update gists after creation' in Settings to use this command.",
+      );
+    } else {
+      new Notice(noGistNotice);
+    }
+  } else if (existingSharedGists.length > 1) {
+    new SelectExistingGistModal(
+      app,
+      existingSharedGists,
+      false,
+      callback,
+    ).open();
+  } else {
+    await callback(existingSharedGists[0]);
+  }
+};
+
 const copyGistUrlEditorCallback =
   (opts: CopyGistUrlEditorCallbackParams) => async () => {
     const { app, plugin } = opts;
 
-    const view = app.workspace.getActiveViewOfType(MarkdownView);
-
-    if (!view) {
-      return new Notice('No active file');
-    }
-
-    const editor = view.editor;
-    const originalContent = editor.getValue();
-
-    const existingSharedGists = getSharedGistsForFile(originalContent);
-
-    if (existingSharedGists.length === 0) {
-      const { enableUpdatingGistsAfterCreation } =
-        await getLatestSettings(plugin);
-
-      if (!enableUpdatingGistsAfterCreation) {
-        return new Notice(
-          "You need to enable 'Update gists after creation' in Settings to use this command.",
-        );
-      } else {
-        return new Notice(
-          'You must share this note as a gist before you can copy its URL to the clipboard.',
-        );
-      }
-    }
-
-    if (existingSharedGists.length > 1) {
-      new SelectExistingGistModal(
-        app,
-        existingSharedGists,
-        false,
-        async (sharedGist) => {
-          navigator.clipboard.writeText(sharedGist.url);
-          new Notice('Copied gist URL to clipboard.');
-        },
-      ).open();
-    } else {
-      const sharedGist = existingSharedGists[0];
-      navigator.clipboard.writeText(sharedGist.url);
-      return new Notice('Copied gist URL to clipboard.');
-    }
+    await withExistingSharedGist(
+      app,
+      plugin,
+      async (sharedGist) => {
+        navigator.clipboard.writeText(sharedGist.url);
+        new Notice('Copied gist URL to clipboard.');
+      },
+      'You must share this note as a gist before you can copy its URL to the clipboard.',
+    );
   };
 
 const openGistEditorCallback =
   (opts: OpenGistEditorCallbackParams) => async () => {
     const { app, plugin } = opts;
 
-    const view = app.workspace.getActiveViewOfType(MarkdownView);
-
-    if (!view) {
-      return new Notice('No active file');
-    }
-
-    const editor = view.editor;
-    const originalContent = editor.getValue();
-
-    const existingSharedGists = getSharedGistsForFile(originalContent);
-
-    if (existingSharedGists.length === 0) {
-      const { enableUpdatingGistsAfterCreation } =
-        await getLatestSettings(plugin);
-
-      if (!enableUpdatingGistsAfterCreation) {
-        return new Notice(
-          "You need to enable 'Update gists after creation' in Settings to use this command.",
-        );
-      } else {
-        return new Notice(
-          'You must share this note as a gist before you can open its gist.',
-        );
-      }
-    }
-
-    if (existingSharedGists.length > 1) {
-      new SelectExistingGistModal(
-        app,
-        existingSharedGists,
-        false,
-        async (sharedGist) => {
-          window.open(sharedGist.url, '_blank');
-        },
-      ).open();
-    } else {
-      const sharedGist = existingSharedGists[0];
-      window.open(sharedGist.url, '_blank');
-    }
+    await withExistingSharedGist(
+      app,
+      plugin,
+      async (sharedGist) => {
+        window.open(sharedGist.url, '_blank');
+      },
+      'You must share this note as a gist before you can open its gist.',
+    );
   };
 
 const deleteGistEditorCallback =
@@ -197,56 +182,25 @@ const deleteGistEditorCallback =
     const editor = view.editor;
     const originalContent = editor.getValue();
 
-    const existingSharedGists = getSharedGistsForFile(originalContent);
+    await withExistingSharedGist(
+      app,
+      plugin,
+      async (sharedGist) => {
+        const result = await deleteGist({ sharedGist });
 
-    if (existingSharedGists.length === 0) {
-      const { enableUpdatingGistsAfterCreation } =
-        await getLatestSettings(plugin);
-
-      if (!enableUpdatingGistsAfterCreation) {
-        return new Notice(
-          "You need to enable 'Update gists after creation' in Settings to use this command.",
-        );
-      } else {
-        return new Notice('There are no gists associated with this note.');
-      }
-    }
-
-    if (existingSharedGists.length > 1) {
-      new SelectExistingGistModal(
-        app,
-        existingSharedGists,
-        false,
-        async (sharedGist) => {
-          const result = await deleteGist({ sharedGist });
-
-          if (result.status === DeleteGistResultStatus.Succeeded) {
-            const updatedContent = removeSharedGistForFile(
-              sharedGist,
-              originalContent,
-            );
-            editor.setValue(updatedContent);
-            new Notice('Gist deleted');
-          } else {
-            new Notice(`Error: ${result.errorMessage}`);
-          }
-        },
-      ).open();
-    } else {
-      const sharedGist = existingSharedGists[0];
-      const result = await deleteGist({ sharedGist });
-
-      if (result.status === DeleteGistResultStatus.Succeeded) {
-        const updatedContent = removeSharedGistForFile(
-          sharedGist,
-          originalContent,
-        );
-        editor.setValue(updatedContent);
-        new Notice('Gist deleted');
-      } else {
-        new Notice(`Error: ${result.errorMessage}`);
-      }
-    }
+        if (result.status === DeleteGistResultStatus.Succeeded) {
+          const updatedContent = removeSharedGistForFile(
+            sharedGist,
+            originalContent,
+          );
+          editor.setValue(updatedContent);
+          new Notice('Gist deleted');
+        } else {
+          new Notice(`Error: ${result.errorMessage}`);
+        }
+      },
+      'There are no gists associated with this note.',
+    );
   };
 
 const shareGistEditorCallback =
