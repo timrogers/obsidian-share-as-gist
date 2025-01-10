@@ -105,11 +105,12 @@ const withExistingSharedGist = async (
   plugin: ShareAsGistPlugin,
   callback: (sharedGist: SharedGist) => Promise<void>,
   noGistNotice: string,
-) => {
+): Promise<void> => {
   const view = app.workspace.getActiveViewOfType(MarkdownView);
 
   if (!view) {
-    return new Notice('No active file');
+    new Notice('No active file');
+    return;
   }
 
   const editor = view.editor;
@@ -122,9 +123,10 @@ const withExistingSharedGist = async (
       await getLatestSettings(plugin);
 
     if (!enableUpdatingGistsAfterCreation) {
-      return new Notice(
+      new Notice(
         "You need to enable 'Update gists after creation' in Settings to use this command.",
       );
+      return;
     } else {
       new Notice(noGistNotice);
     }
