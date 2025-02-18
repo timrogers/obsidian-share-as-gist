@@ -14,6 +14,8 @@ import {
   debounce,
 } from 'obsidian';
 import matter from 'gray-matter';
+import { remark } from 'remark';
+import remarkToc from 'remark-toc';
 import {
   CreateGistResultStatus,
   DeleteGistResultStatus,
@@ -45,6 +47,7 @@ interface ShareAsGistSettings {
   enableAutoSaving: boolean;
   showAutoSaveNotice: boolean;
   includeFrontMatter: boolean;
+  includeTableOfContents: boolean;
 }
 
 const DEFAULT_SETTINGS: ShareAsGistSettings = {
@@ -52,6 +55,7 @@ const DEFAULT_SETTINGS: ShareAsGistSettings = {
   enableUpdatingGistsAfterCreation: true,
   enableAutoSaving: false,
   showAutoSaveNotice: false,
+  includeTableOfContents: false,
 };
 
 interface ShareGistEditorCallbackParams {
@@ -88,6 +92,11 @@ const getLatestSettings = async (
 ): Promise<ShareAsGistSettings> => {
   await plugin.loadSettings();
   return plugin.settings;
+};
+
+const addTableOfContents = async (content: string): Promise<string> => {
+  const resultAsVFile = await remark().use(remarkToc).process(content);
+  return String(resultAsVFile);
 };
 
 const stripFrontMatter = (content: string): string => matter(content).content;
@@ -209,8 +218,11 @@ const shareGistEditorCallback =
   (opts: ShareGistEditorCallbackParams) => async () => {
     const { isPublic, app, plugin, target } = opts;
 
-    const { enableUpdatingGistsAfterCreation, includeFrontMatter } =
-      await getLatestSettings(plugin);
+    const {
+      enableUpdatingGistsAfterCreation,
+      includeFrontMatter,
+      includeTableOfContents,
+    } = await getLatestSettings(plugin);
 
     const view = app.workspace.getActiveViewOfType(MarkdownView);
 
@@ -227,9 +239,13 @@ const shareGistEditorCallback =
       target,
     ).filter((sharedGist) => sharedGist.isPublic === isPublic);
 
-    const gistContent = includeFrontMatter
+    const baseContent = includeFrontMatter
       ? originalContent
       : stripFrontMatter(originalContent);
+
+    const content = includeTableOfContents
+      ? await addTableOfContents(baseContent)
+      : baseContent;
 
     if (enableUpdatingGistsAfterCreation && existingSharedGists.length) {
       new SelectExistingGistModal(
@@ -240,7 +256,7 @@ const shareGistEditorCallback =
           if (sharedGist) {
             const result = await updateGist({
               sharedGist,
-              content: gistContent,
+              content,
             });
 
             if (result.status === CreateGistResultStatus.Succeeded) {
@@ -260,7 +276,7 @@ const shareGistEditorCallback =
             new SetGistDescriptionModal(app, filename, async (description) => {
               const result = await createGist({
                 target,
-                content: gistContent,
+                content,
                 description,
                 filename,
                 isPublic,
@@ -287,7 +303,7 @@ const shareGistEditorCallback =
       new SetGistDescriptionModal(app, filename, async (description) => {
         const result = await createGist({
           target,
-          content: gistContent,
+          content,
           description,
           filename,
           isPublic,
@@ -320,18 +336,25 @@ const documentChangedAutoSaveCallback = async (
 ) => {
   const { plugin, file, content: rawContent } = opts;
 
-  const { includeFrontMatter, showAutoSaveNotice } =
+  const { includeFrontMatter, showAutoSaveNotice, includeTableOfContents } =
     await getLatestSettings(plugin);
 
   const existingSharedGists = getSharedGistsForFile(rawContent);
 
-  const content = includeFrontMatter
+  const baseContent = includeFrontMatter
     ? rawContent
     : stripFrontMatter(rawContent);
 
+  const content = includeTableOfContents
+    ? await addTableOfContents(baseContent)
+    : baseContent;
+
   if (existingSharedGists.length) {
     for (const sharedGist of existingSharedGists) {
-      const result = await updateGist({ sharedGist, content });
+      const result = await updateGist({
+        sharedGist,
+        content,
+      });
       if (result.status === CreateGistResultStatus.Succeeded) {
         const updatedContent = upsertSharedGistForFile(
           result.sharedGist,
@@ -754,6 +777,20 @@ class ShareAsGistSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.showAutoSaveNotice)
           .onChange(async (value) => {
             this.plugin.settings.showAutoSaveNotice = value;
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName('Include table of contents')
+      .setDesc(
+        'Whether to automatically generate and include a table of contents in the shared gist. The table of contents will be inserted directly after the `Contents` or `Table of Contents` heading, if one exists.',
+      )
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.includeTableOfContents)
+          .onChange(async (value) => {
+            this.plugin.settings.includeTableOfContents = value;
             await this.plugin.saveSettings();
           }),
       );

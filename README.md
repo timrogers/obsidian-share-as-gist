@@ -6,6 +6,7 @@ This plugin for Obsidian (https://obsidian.md) allows you to share your notes as
 - 💼 Works with GitHub.com and [GitHub Enterprise Server](https://docs.github.com/en/enterprise-server/admin/overview/about-github-enterprise-server)
 - 🔄 Update your gist when you make changes to your notes
 - 🗑️ Delete a gist if you change your mind
+- 📜 Optionally include a table of contents in your gist for easy navigation
 
 ## Usage
 
@@ -48,6 +49,7 @@ This plugin for Obsidian (https://obsidian.md) allows you to share your notes as
 - **Include front matter in gists** (_disabled by default_): Whether your gists should include frontmatter (properties). If this is disabled, the front matter will be stripped from your gists.
 - **Enable auto-saving Gists after edit** (_disabled by default_): Whether your gists should be automatically updated when you save your note. If this is disabled, you can update your gists automatically with the normal "share" command.
 - **Enable auto-save notice** (_disabled by default_): Whether a notice should be displayed when your gists are automatically updated. This option is only relevant if the "Enable auto-saving Gists after edit" option above is turned on.
+- **Include table of contents** (_disabled by default_): Whether to automatically generate and include a table of contents at the start of each gist
 
 ## Securing your GitHub personal access token(s)
 
