@@ -6,7 +6,7 @@ This plugin for Obsidian (https://obsidian.md) allows you to share your notes as
 - 💼 Works with GitHub.com and [GitHub Enterprise Server](https://docs.github.com/en/enterprise-server/admin/overview/about-github-enterprise-server)
 - 🔄 Update your gist when you make changes to your notes
 - 🗑️ Delete a gist if you change your mind
-- 📜 Optionally include a table of contents in your notes for easy navigation
+- 📜 Optionally include a table of contents in your gist for easy navigation
 
 ## Usage
 
