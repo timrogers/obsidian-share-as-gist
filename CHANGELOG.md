@@ -1,3 +1,7 @@
+# v1.9.0 (February 18, 2025)
+
+- Add "Include table of contents" option, defaulting to off, which adds a table of contents to your gist when sharing
+
 # v1.8.0 (January 9, 2025)
 
 * Add new "Delete gist" command for deleting a gist you've created
