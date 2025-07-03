@@ -23,7 +23,7 @@
 		"builtin-modules": "^4.0.0",
 		"esbuild": "0.25.0",
 		"eslint": "^9.30.1",
-		"eslint-config-prettier": "^10.0.1",
+		"eslint-config-prettier": "^10.1.5",
 		"eslint-plugin-prettier": "^5.2.3",
 		"globals": "^16.0.0",
 		"obsidian": "latest",
