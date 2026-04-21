@@ -15,7 +15,7 @@ const compat = new FlatCompat({
 
 export default [
   {
-    ignores: ['node_modules/**', 'build/**', '{,**/}main.js'],
+    ignores: ['node_modules/**', 'build/**', 'main.js'],
   },
   js.configs.recommended,
   ...compat.extends(
