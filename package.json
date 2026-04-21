@@ -20,7 +20,7 @@
 		"@types/node": "^24.9.2",
 		"@typescript-eslint/eslint-plugin": "^8.59.0",
 		"@typescript-eslint/parser": "^8.59.0",
-		"builtin-modules": "^4.0.0",
+		"builtin-modules": "^5.1.0",
 		"esbuild": "0.25.11",
 		"eslint": "^9.30.1",
 		"eslint-config-prettier": "^10.1.8",
