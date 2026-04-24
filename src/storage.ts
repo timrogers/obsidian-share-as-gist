@@ -52,7 +52,9 @@ export const getTargetAccessToken = (target: Target): string | null => {
   }
 };
 
-export const getAccessTokenForBaseUrl = (baseUrl: string): string | null => {
+export const getAccessTokenForBaseUrl = (
+  baseUrl: string | null,
+): string | null => {
   if (baseUrl === DOTCOM_BASE_URL) {
     return getDotcomAccessToken();
   } else {

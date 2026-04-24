@@ -386,7 +386,7 @@ const hasAtLeastOneSharedGist = (editor: Editor): boolean => {
 };
 
 export default class ShareAsGistPlugin extends Plugin {
-  settings!: ShareAsGistSettings;
+  settings: ShareAsGistSettings = DEFAULT_SETTINGS;
 
   async onload() {
     await this.loadSettings();

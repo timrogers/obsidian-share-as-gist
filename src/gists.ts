@@ -142,7 +142,7 @@ export const createGist = async (
     const { content, description, filename, isPublic, target } = opts;
 
     const baseUrl = getTargetBaseUrl(target);
-    const accessToken = getAccessTokenForBaseUrl(baseUrl ?? '');
+    const accessToken = getAccessTokenForBaseUrl(baseUrl);
 
     const octokit = new Octokit({
       auth: accessToken,
