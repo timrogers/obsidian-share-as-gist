@@ -5,19 +5,19 @@ const DOTCOM_ACCESS_TOKEN_LOCAL_STORAGE_KEY =
 const GHES_BASE_URL_LOCAL_STORAGE_KEY = 'share_as_gist_ghes_base_url';
 const GHES_ACCESS_TOKEN_LOCAL_STORAGE_KEY = 'share_as_gist_ghes_access_token';
 
-export const getDotcomAccessToken = (): string =>
+export const getDotcomAccessToken = (): string | null =>
   localStorage.getItem(DOTCOM_ACCESS_TOKEN_LOCAL_STORAGE_KEY);
 export const setDotcomAccessToken = (accessToken: string): void =>
   localStorage.setItem(DOTCOM_ACCESS_TOKEN_LOCAL_STORAGE_KEY, accessToken);
 
 export const isDotcomEnabled = (): boolean => !!getDotcomAccessToken();
 
-export const getGhesBaseUrl = (): string =>
+export const getGhesBaseUrl = (): string | null =>
   localStorage.getItem(GHES_BASE_URL_LOCAL_STORAGE_KEY);
 export const setGhesBaseUrl = (baseUrl: string): void =>
   localStorage.setItem(GHES_BASE_URL_LOCAL_STORAGE_KEY, baseUrl);
 
-export const getGhesAccessToken = (): string =>
+export const getGhesAccessToken = (): string | null =>
   localStorage.getItem(GHES_ACCESS_TOKEN_LOCAL_STORAGE_KEY);
 export const setGhesAccessToken = (accessToken: string): void =>
   localStorage.setItem(GHES_ACCESS_TOKEN_LOCAL_STORAGE_KEY, accessToken);
@@ -34,7 +34,7 @@ export const isTargetEnabled = (target: Target): boolean => {
   }
 };
 
-export const getTargetBaseUrl = (target: Target): string => {
+export const getTargetBaseUrl = (target: Target): string | null => {
   switch (target) {
     case Target.Dotcom:
       return DOTCOM_BASE_URL;
@@ -43,7 +43,7 @@ export const getTargetBaseUrl = (target: Target): string => {
   }
 };
 
-export const getTargetAccessToken = (target: Target): string => {
+export const getTargetAccessToken = (target: Target): string | null => {
   switch (target) {
     case Target.Dotcom:
       return getDotcomAccessToken();
@@ -52,7 +52,7 @@ export const getTargetAccessToken = (target: Target): string => {
   }
 };
 
-export const getAccessTokenForBaseUrl = (baseUrl: string): string => {
+export const getAccessTokenForBaseUrl = (baseUrl: string): string | null => {
   if (baseUrl === DOTCOM_BASE_URL) {
     return getDotcomAccessToken();
   } else {

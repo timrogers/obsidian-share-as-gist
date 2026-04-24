@@ -10,6 +10,7 @@ import {
   PluginSettingTab,
   Setting,
   SuggestModal,
+  TAbstractFile,
   TFile,
   debounce,
 } from 'obsidian';
@@ -144,7 +145,9 @@ const withExistingSharedGist = async (
       app,
       existingSharedGists,
       false,
-      callback,
+      async (gist: SharedGist | null) => {
+        if (gist) await callback(gist);
+      },
     ).open();
   } else {
     await callback(existingSharedGists[0]);
@@ -232,6 +235,11 @@ const shareGistEditorCallback =
 
     const editor = view.editor;
     const originalContent = editor.getValue();
+
+    if (!view.file) {
+      return new Notice('No active file');
+    }
+
     const filename = view.file.name;
 
     const existingSharedGists = getSharedGistsForFile(
@@ -260,12 +268,12 @@ const shareGistEditorCallback =
             });
 
             if (result.status === CreateGistResultStatus.Succeeded) {
-              navigator.clipboard.writeText(result.sharedGist.url);
+              navigator.clipboard.writeText(result.sharedGist!.url);
               new Notice(
                 `Copied ${isPublic ? 'public' : 'private'} gist URL to clipboard`,
               );
               const updatedContent = upsertSharedGistForFile(
-                result.sharedGist,
+                result.sharedGist!,
                 originalContent,
               );
               editor.setValue(updatedContent);
@@ -283,12 +291,12 @@ const shareGistEditorCallback =
               });
 
               if (result.status === CreateGistResultStatus.Succeeded) {
-                navigator.clipboard.writeText(result.sharedGist.url);
+                navigator.clipboard.writeText(result.sharedGist!.url);
                 new Notice(
                   `Copied ${isPublic ? 'public' : 'private'} gist URL to clipboard`,
                 );
                 const updatedContent = upsertSharedGistForFile(
-                  result.sharedGist,
+                  result.sharedGist!,
                   originalContent,
                 );
                 editor.setValue(updatedContent);
@@ -310,18 +318,18 @@ const shareGistEditorCallback =
         });
 
         if (result.status === CreateGistResultStatus.Succeeded) {
-          navigator.clipboard.writeText(result.sharedGist.url);
+          navigator.clipboard.writeText(result.sharedGist!.url);
           new Notice(
             `Copied ${isPublic ? 'public' : 'private'} gist URL to clipboard`,
           );
 
           if (enableUpdatingGistsAfterCreation) {
             const updatedContent = upsertSharedGistForFile(
-              result.sharedGist,
+              result.sharedGist!,
               originalContent,
             );
 
-            app.vault.modify(view.file, updatedContent);
+            app.vault.modify(view.file!, updatedContent);
             editor.refresh();
           }
         } else {
@@ -357,7 +365,7 @@ const documentChangedAutoSaveCallback = async (
       });
       if (result.status === CreateGistResultStatus.Succeeded) {
         const updatedContent = upsertSharedGistForFile(
-          result.sharedGist,
+          result.sharedGist!,
           rawContent,
         );
         await file.vault.adapter.write(file.path, updatedContent);
@@ -378,7 +386,7 @@ const hasAtLeastOneSharedGist = (editor: Editor): boolean => {
 };
 
 export default class ShareAsGistPlugin extends Plugin {
-  settings: ShareAsGistSettings;
+  settings!: ShareAsGistSettings;
 
   async onload() {
     await this.loadSettings();
@@ -501,10 +509,12 @@ export default class ShareAsGistPlugin extends Plugin {
     const previousContents: Record<string, string> = {};
     const debouncedCallbacks: Record<
       string,
-      Debouncer<[string, TFile], Promise<Notice>>
+      Debouncer<[string, TFile], Promise<Notice | undefined>>
     > = {};
 
-    this.app.vault.on('modify', async (file: TFile) => {
+    this.app.vault.on('modify', async (abstractFile: TAbstractFile) => {
+      if (!(abstractFile instanceof TFile)) return;
+      const file = abstractFile;
       const content = await file.vault.adapter.read(file.path);
 
       // Frontmatter is stripped here because it is updated when the gist is updated,
@@ -546,7 +556,7 @@ export default class ShareAsGistPlugin extends Plugin {
   }
 }
 
-class SelectExistingGistModal extends SuggestModal<SharedGist> {
+class SelectExistingGistModal extends SuggestModal<SharedGist | null> {
   sharedGists: SharedGist[];
   allowCreatingNewGist: boolean;
   onSubmit: (sharedGist: SharedGist | null) => Promise<void>;
@@ -555,7 +565,7 @@ class SelectExistingGistModal extends SuggestModal<SharedGist> {
     app: App,
     sharedGists: SharedGist[],
     allowCreatingNewGist: boolean,
-    onSubmit: (sharedGist: SharedGist) => Promise<void>,
+    onSubmit: (sharedGist: SharedGist | null) => Promise<void>,
   ) {
     super(app);
     this.sharedGists = sharedGists;
@@ -565,7 +575,7 @@ class SelectExistingGistModal extends SuggestModal<SharedGist> {
 
   getSuggestions(): Array<SharedGist | null> {
     if (this.allowCreatingNewGist) {
-      return this.sharedGists.concat(null);
+      return [...this.sharedGists, null];
     } else {
       return this.sharedGists;
     }
@@ -621,7 +631,7 @@ class SetGistDescriptionModal extends Modal {
     new Setting(contentEl).setName('Description').addTextArea((text) => {
       text.inputEl.setCssStyles({ width: '100%' });
 
-      text.setValue(this.description).onChange((value) => {
+      text.setValue(this.description ?? '').onChange((value) => {
         this.description = value;
       });
     });
@@ -683,7 +693,7 @@ class ShareAsGistSettingTab extends PluginSettingTab {
       .addText((text) =>
         text
           .setPlaceholder('Your personal access token')
-          .setValue(dotcomAccessToken)
+          .setValue(dotcomAccessToken ?? '')
           .onChange(async (value) => {
             setDotcomAccessToken(value);
             await this.plugin.saveSettings();
@@ -700,7 +710,7 @@ class ShareAsGistSettingTab extends PluginSettingTab {
       .addText((text) =>
         text
           .setPlaceholder('https://github.example.com/api/v3')
-          .setValue(ghesBaseUrl)
+          .setValue(ghesBaseUrl ?? '')
           .onChange(async (value) => {
             setGhesBaseUrl(value);
             await this.plugin.saveSettings();
@@ -715,7 +725,7 @@ class ShareAsGistSettingTab extends PluginSettingTab {
       .addText((text) =>
         text
           .setPlaceholder('Your personal access token')
-          .setValue(ghesAccessToken)
+          .setValue(ghesAccessToken ?? '')
           .onChange(async (value) => {
             setGhesAccessToken(value);
             await this.plugin.saveSettings();

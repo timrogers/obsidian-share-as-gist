@@ -78,14 +78,17 @@ export const updateGist = async (
 
     return {
       status: CreateGistResultStatus.Succeeded,
-      sharedGist: { ...sharedGist, updatedAt: response.data.updated_at },
+      sharedGist: {
+        ...sharedGist,
+        updatedAt: response.data.updated_at ?? sharedGist.updatedAt,
+      },
       errorMessage: null,
     };
   } catch (e) {
     return {
       status: CreateGistResultStatus.Failed,
       sharedGist: sharedGist,
-      errorMessage: e.message,
+      errorMessage: e instanceof Error ? e.message : String(e),
     };
   }
 };
@@ -139,11 +142,11 @@ export const createGist = async (
     const { content, description, filename, isPublic, target } = opts;
 
     const baseUrl = getTargetBaseUrl(target);
-    const accessToken = getAccessTokenForBaseUrl(baseUrl);
+    const accessToken = getAccessTokenForBaseUrl(baseUrl ?? '');
 
     const octokit = new Octokit({
       auth: accessToken,
-      baseUrl,
+      baseUrl: baseUrl ?? undefined,
     });
 
     const response = await octokit.rest.gists.create({
@@ -163,7 +166,7 @@ export const createGist = async (
         updatedAt: response.data.updated_at as string,
         filename,
         isPublic,
-        baseUrl,
+        baseUrl: baseUrl ?? '',
       },
       errorMessage: null,
     };
@@ -171,7 +174,7 @@ export const createGist = async (
     return {
       status: CreateGistResultStatus.Failed,
       sharedGist: null,
-      errorMessage: e.message,
+      errorMessage: e instanceof Error ? e.message : String(e),
     };
   }
 };

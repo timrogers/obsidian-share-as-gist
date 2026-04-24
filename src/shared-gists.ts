@@ -74,6 +74,7 @@ export const removeSharedGistForFile = (
   );
 
   const updatedData = { ...data, gists: sharedGistsWithGistRemoved };
-  if (sharedGistsWithGistRemoved.length === 0) delete updatedData.gists;
+  if (sharedGistsWithGistRemoved.length === 0)
+    delete (updatedData as Record<string, unknown>).gists;
   return matter.stringify(content, updatedData);
 };
