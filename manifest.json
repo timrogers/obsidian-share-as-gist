@@ -1,10 +1,10 @@
 {
-	"id": "obsidian-share-as-gist",
-	"name": "Share as Gist",
-	"version": "1.9.0",
-	"minAppVersion": "1.8.7",
-	"description": "Shares an Obsidian note as a GitHub.com gist",
-	"author": "Tim Rogers",
-	"authorUrl": "https://github.com/timrogers",
-	"isDesktopOnly": false
+"id": "obsidian-share-as-gist",
+"name": "Share as Gist",
+"version": "1.9.0",
+"minAppVersion": "1.8.7",
+"description": "Shares a note as a GitHub.com gist.",
+"author": "Tim Rogers",
+"authorUrl": "https://github.com/timrogers",
+"isDesktopOnly": false
 }
