@@ -31,6 +31,7 @@ import {
   getGhesBaseUrl,
   isDotcomEnabled,
   isGhesEnabled,
+  LOCAL_STORAGE_KEYS,
   setDotcomAccessToken,
   setGhesAccessToken,
   setGhesBaseUrl,
@@ -394,14 +395,8 @@ const hasAtLeastOneSharedGist = (editor: Editor): boolean => {
   return existingSharedGists.length > 0;
 };
 
-const LEGACY_LOCAL_STORAGE_KEYS = [
-  'share_as_gist_dotcom_access_token',
-  'share_as_gist_ghes_base_url',
-  'share_as_gist_ghes_access_token',
-];
-
 const migrateLegacyLocalStorage = (app: App): void => {
-  for (const key of LEGACY_LOCAL_STORAGE_KEYS) {
+  for (const key of LOCAL_STORAGE_KEYS) {
     const legacyValue = localStorage.getItem(key);
     if (legacyValue !== null) {
       const existingValue = app.loadLocalStorage(key) as unknown;

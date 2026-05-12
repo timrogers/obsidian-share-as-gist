@@ -1,10 +1,17 @@
 import { App } from 'obsidian';
 import { DOTCOM_BASE_URL, Target } from './gists';
 
-const DOTCOM_ACCESS_TOKEN_LOCAL_STORAGE_KEY =
+export const DOTCOM_ACCESS_TOKEN_LOCAL_STORAGE_KEY =
   'share_as_gist_dotcom_access_token';
-const GHES_BASE_URL_LOCAL_STORAGE_KEY = 'share_as_gist_ghes_base_url';
-const GHES_ACCESS_TOKEN_LOCAL_STORAGE_KEY = 'share_as_gist_ghes_access_token';
+export const GHES_BASE_URL_LOCAL_STORAGE_KEY = 'share_as_gist_ghes_base_url';
+export const GHES_ACCESS_TOKEN_LOCAL_STORAGE_KEY =
+  'share_as_gist_ghes_access_token';
+
+export const LOCAL_STORAGE_KEYS = [
+  DOTCOM_ACCESS_TOKEN_LOCAL_STORAGE_KEY,
+  GHES_BASE_URL_LOCAL_STORAGE_KEY,
+  GHES_ACCESS_TOKEN_LOCAL_STORAGE_KEY,
+];
 
 const loadString = (app: App, key: string): string | null => {
   const value = app.loadLocalStorage(key) as unknown;
