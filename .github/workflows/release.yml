@@ -12,6 +12,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+
     steps:
       - uses: actions/checkout@v6
       - name: Use Node.js
@@ -29,6 +34,11 @@ jobs:
           zip -r ${{ env.PLUGIN_NAME }}.zip ${{ env.PLUGIN_NAME }}
           ls
           echo "::set-output name=tag_name::$(git tag --sort version:refname | tail -n 1)"
+
+      - name: Attest build provenance for main.js
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: ./main.js
 
       - name: Create Release
         id: create_release
