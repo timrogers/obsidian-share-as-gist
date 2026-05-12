@@ -1,4 +1,5 @@
 import { Octokit } from '@octokit/rest';
+import { App } from 'obsidian';
 import { getBaseUrlForSharedGist, SharedGist } from './shared-gists';
 import { getAccessTokenForBaseUrl, getTargetBaseUrl } from './storage';
 
@@ -26,6 +27,7 @@ export interface CreateGistResult {
 }
 
 interface CreateGistOptions {
+  app: App;
   filename: string;
   description: string | null;
   content: string;
@@ -34,11 +36,13 @@ interface CreateGistOptions {
 }
 
 interface UpdateGistOptions {
+  app: App;
   sharedGist: SharedGist;
   content: string;
 }
 
 interface DeleteGistOptions {
+  app: App;
   sharedGist: SharedGist;
 }
 
@@ -50,10 +54,10 @@ interface DeleteGistResult {
 export const updateGist = async (
   opts: UpdateGistOptions,
 ): Promise<CreateGistResult> => {
-  const { sharedGist, content } = opts;
+  const { app, sharedGist, content } = opts;
 
   const baseUrl = getBaseUrlForSharedGist(sharedGist);
-  const accessToken = getAccessTokenForBaseUrl(baseUrl);
+  const accessToken = getAccessTokenForBaseUrl(app, baseUrl);
 
   if (!accessToken) {
     return {
@@ -96,10 +100,10 @@ export const updateGist = async (
 export const deleteGist = async (
   opts: DeleteGistOptions,
 ): Promise<DeleteGistResult> => {
-  const { sharedGist } = opts;
+  const { app, sharedGist } = opts;
 
   const baseUrl = getBaseUrlForSharedGist(sharedGist);
-  const accessToken = getAccessTokenForBaseUrl(baseUrl);
+  const accessToken = getAccessTokenForBaseUrl(app, baseUrl);
 
   if (!accessToken) {
     return {
@@ -139,10 +143,10 @@ export const createGist = async (
   opts: CreateGistOptions,
 ): Promise<CreateGistResult> => {
   try {
-    const { content, description, filename, isPublic, target } = opts;
+    const { app, content, description, filename, isPublic, target } = opts;
 
-    const baseUrl = getTargetBaseUrl(target);
-    const accessToken = getAccessTokenForBaseUrl(baseUrl);
+    const baseUrl = getTargetBaseUrl(app, target);
+    const accessToken = getAccessTokenForBaseUrl(app, baseUrl);
 
     const octokit = new Octokit({
       auth: accessToken,
@@ -160,10 +164,10 @@ export const createGist = async (
     return {
       status: CreateGistResultStatus.Succeeded,
       sharedGist: {
-        id: response.data.id as string,
-        url: response.data.html_url as string,
-        createdAt: response.data.created_at as string,
-        updatedAt: response.data.updated_at as string,
+        id: response.data.id!,
+        url: response.data.html_url!,
+        createdAt: response.data.created_at!,
+        updatedAt: response.data.updated_at!,
         filename,
         isPublic,
         baseUrl: baseUrl ?? '',

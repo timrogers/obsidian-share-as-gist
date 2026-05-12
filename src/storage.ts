@@ -1,3 +1,4 @@
+import { App } from 'obsidian';
 import { DOTCOM_BASE_URL, Target } from './gists';
 
 const DOTCOM_ACCESS_TOKEN_LOCAL_STORAGE_KEY =
@@ -5,59 +6,69 @@ const DOTCOM_ACCESS_TOKEN_LOCAL_STORAGE_KEY =
 const GHES_BASE_URL_LOCAL_STORAGE_KEY = 'share_as_gist_ghes_base_url';
 const GHES_ACCESS_TOKEN_LOCAL_STORAGE_KEY = 'share_as_gist_ghes_access_token';
 
-export const getDotcomAccessToken = (): string | null =>
-  localStorage.getItem(DOTCOM_ACCESS_TOKEN_LOCAL_STORAGE_KEY);
-export const setDotcomAccessToken = (accessToken: string): void =>
-  localStorage.setItem(DOTCOM_ACCESS_TOKEN_LOCAL_STORAGE_KEY, accessToken);
+const loadString = (app: App, key: string): string | null => {
+  const value = app.loadLocalStorage(key) as unknown;
+  return typeof value === 'string' ? value : null;
+};
 
-export const isDotcomEnabled = (): boolean => !!getDotcomAccessToken();
+export const getDotcomAccessToken = (app: App): string | null =>
+  loadString(app, DOTCOM_ACCESS_TOKEN_LOCAL_STORAGE_KEY);
+export const setDotcomAccessToken = (app: App, accessToken: string): void =>
+  app.saveLocalStorage(DOTCOM_ACCESS_TOKEN_LOCAL_STORAGE_KEY, accessToken);
 
-export const getGhesBaseUrl = (): string | null =>
-  localStorage.getItem(GHES_BASE_URL_LOCAL_STORAGE_KEY);
-export const setGhesBaseUrl = (baseUrl: string): void =>
-  localStorage.setItem(GHES_BASE_URL_LOCAL_STORAGE_KEY, baseUrl);
+export const isDotcomEnabled = (app: App): boolean =>
+  !!getDotcomAccessToken(app);
 
-export const getGhesAccessToken = (): string | null =>
-  localStorage.getItem(GHES_ACCESS_TOKEN_LOCAL_STORAGE_KEY);
-export const setGhesAccessToken = (accessToken: string): void =>
-  localStorage.setItem(GHES_ACCESS_TOKEN_LOCAL_STORAGE_KEY, accessToken);
+export const getGhesBaseUrl = (app: App): string | null =>
+  loadString(app, GHES_BASE_URL_LOCAL_STORAGE_KEY);
+export const setGhesBaseUrl = (app: App, baseUrl: string): void =>
+  app.saveLocalStorage(GHES_BASE_URL_LOCAL_STORAGE_KEY, baseUrl);
 
-export const isGhesEnabled = (): boolean =>
-  !!getGhesBaseUrl() && !!getGhesAccessToken();
+export const getGhesAccessToken = (app: App): string | null =>
+  loadString(app, GHES_ACCESS_TOKEN_LOCAL_STORAGE_KEY);
+export const setGhesAccessToken = (app: App, accessToken: string): void =>
+  app.saveLocalStorage(GHES_ACCESS_TOKEN_LOCAL_STORAGE_KEY, accessToken);
 
-export const isTargetEnabled = (target: Target): boolean => {
+export const isGhesEnabled = (app: App): boolean =>
+  !!getGhesBaseUrl(app) && !!getGhesAccessToken(app);
+
+export const isTargetEnabled = (app: App, target: Target): boolean => {
   switch (target) {
     case Target.Dotcom:
-      return isDotcomEnabled();
+      return isDotcomEnabled(app);
     case Target.GitHubEnterpriseServer:
-      return isGhesEnabled();
+      return isGhesEnabled(app);
   }
 };
 
-export const getTargetBaseUrl = (target: Target): string | null => {
+export const getTargetBaseUrl = (app: App, target: Target): string | null => {
   switch (target) {
     case Target.Dotcom:
       return DOTCOM_BASE_URL;
     case Target.GitHubEnterpriseServer:
-      return getGhesBaseUrl();
+      return getGhesBaseUrl(app);
   }
 };
 
-export const getTargetAccessToken = (target: Target): string | null => {
+export const getTargetAccessToken = (
+  app: App,
+  target: Target,
+): string | null => {
   switch (target) {
     case Target.Dotcom:
-      return getDotcomAccessToken();
+      return getDotcomAccessToken(app);
     case Target.GitHubEnterpriseServer:
-      return getGhesAccessToken();
+      return getGhesAccessToken(app);
   }
 };
 
 export const getAccessTokenForBaseUrl = (
+  app: App,
   baseUrl: string | null,
 ): string | null => {
   if (baseUrl === DOTCOM_BASE_URL) {
-    return getDotcomAccessToken();
+    return getDotcomAccessToken(app);
   } else {
-    return getGhesAccessToken();
+    return getGhesAccessToken(app);
   }
 };
