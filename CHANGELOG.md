@@ -1,3 +1,8 @@
+# v2.0.1 (May 13, 2026)
+
+* Tidy settings tab headings ("GitHub accounts" and "Advanced")
+* Improve type safety of `createGist` result and validate GitHub API response metadata before use
+
 # v2.0.0 (May 13, 2026)
 
 * **BREAKING CHANGE**: Bump required Obsidian version from v0.9.7 to v1.8.7
