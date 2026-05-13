@@ -20,11 +20,21 @@ export enum DeleteGistResultStatus {
   Failed = 'failed',
 }
 
-export interface CreateGistResult {
-  status: CreateGistResultStatus;
+type SuccessfulCreateGistResult = {
+  status: CreateGistResultStatus.Succeeded;
+  sharedGist: SharedGist;
+  errorMessage: null;
+};
+
+type FailedCreateGistResult = {
+  status: CreateGistResultStatus.Failed;
   sharedGist: SharedGist | null;
-  errorMessage: string | null;
-}
+  errorMessage: string;
+};
+
+export type CreateGistResult =
+  | SuccessfulCreateGistResult
+  | FailedCreateGistResult;
 
 interface CreateGistOptions {
   app: App;
@@ -161,13 +171,24 @@ export const createGist = async (
       },
     });
 
+    const {
+      id,
+      html_url: url,
+      created_at: createdAt,
+      updated_at: updatedAt,
+    } = response.data;
+
+    if (!id || !url || !createdAt || !updatedAt) {
+      throw new Error('GitHub API response missing expected gist metadata.');
+    }
+
     return {
       status: CreateGistResultStatus.Succeeded,
       sharedGist: {
-        id: response.data.id,
-        url: response.data.html_url,
-        createdAt: response.data.created_at,
-        updatedAt: response.data.updated_at,
+        id,
+        url,
+        createdAt,
+        updatedAt,
         filename,
         isPublic,
         baseUrl: baseUrl ?? '',

@@ -244,7 +244,8 @@ const shareGistEditorCallback =
       return;
     }
 
-    const filename = view.file.name;
+    const file = view.file;
+    const filename = file.name;
 
     const existingSharedGists = getSharedGistsForFile(
       originalContent,
@@ -336,7 +337,7 @@ const shareGistEditorCallback =
               originalContent,
             );
 
-            await app.vault.modify(view.file, updatedContent);
+            await app.vault.modify(file, updatedContent);
             editor.refresh();
           }
         } else {
