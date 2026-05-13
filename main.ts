@@ -715,7 +715,7 @@ class ShareAsGistSettingTab extends PluginSettingTab {
 
     containerEl.empty();
 
-    new Setting(containerEl).setName('GitHub sharing').setHeading();
+    new Setting(containerEl).setName('GitHub accounts').setHeading();
 
     new Setting(containerEl).setName('GitHub.com').setHeading();
 
