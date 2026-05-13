@@ -63,7 +63,7 @@ For your security, you should make sure that you give your personal access token
 
 1. Clone this repo into the `.obsidian/plugins` directory in your Obsidian vault.
 2. Navigate to the `obsidian-share-as-gist` directory you've just cloned.
-3. Use Node.js v24.15.0.
+3. Use the Node.js version in `.tool-versions`.
 4. Install the dependencies by running `npm i`.
 5. Start a process to automatically build your plugin when you make changes by running `npm run dev`.
 6. Make changes, and test them in Obsidian. You will have to manually reload the plugin from the "Community plugins" screen when you make a change.
