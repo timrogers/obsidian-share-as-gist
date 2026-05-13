@@ -1,6 +1,36 @@
+# v2.0.0 (May 13, 2026)
+
+* **BREAKING CHANGE**: Bump required Obsidian version from v0.9.7 to v1.8.7
+* Include artifact attestation on `main.js` file in releases, aligning with Obsidian Community guidelines
+* Update plugin description to match Obsidian Community guidelines
+* Stop including `.zip` bundle in release assets
+* Fix various Obsidian Community code warnings
+* Bump @typescript-eslint/parser from 8.24.0 to 8.59.3
+* Bump actions/setup-node from 4.2.0 to 6.4.0
+* Bump @types/node from 22.13.4 to 25.7.0
+* Bump obsidian from 1.7.2 to 1.12.3
+* Bump eslint-plugin-prettier from 5.2.1 to 5.5.5
+* Bump globals from 15.15.0 to 17.6.0
+* Bump eslint from 9.20.1 to 10.3.0
+* Bump js-yaml from 3.14.1 to 3.14.2
+* Bump esbuild from 0.25.0 to 0.28.0
+* Bump eslint-config-prettier from 10.0.1 to 10.1.8
+* Bump prettier from 3.5.1 to 3.8.3
+* Bump minimatch
+* Bump flatted from 3.3.2 to 3.4.2
+* Bump picomatch from 2.3.1 to 2.3.2
+* Bump @typescript-eslint/eslint-plugin from 8.24.1 to 8.59.3
+* Bump builtin-modules from 4.0.0 to 5.2.0
+* Bump @octokit/rest from 21.1.1 to 22.0.1
+* Bump actions/checkout from 4 to 6
+* Bump @eslint/js from 9.30.1 to 10.0.1
+* Bump @eslint/eslintrc from 3.3.1 to 3.3.5
+* Bump typescript from 5.7.3 to 6.0.3
+* Bump transitive dependencies
+
 # v1.9.0 (February 18, 2025)
 
-- Add "Include table of contents" option, defaulting to off, which adds a table of contents to your gist when sharing
+* Add "Include table of contents" option, defaulting to off, which adds a table of contents to your gist when sharing
 
 # v1.8.0 (January 9, 2025)
 
