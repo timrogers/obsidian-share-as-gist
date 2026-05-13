@@ -244,7 +244,8 @@ const shareGistEditorCallback =
       return;
     }
 
-    const filename = view.file.name;
+    const file = view.file;
+    const filename = file.name;
 
     const existingSharedGists = getSharedGistsForFile(
       originalContent,
@@ -273,12 +274,12 @@ const shareGistEditorCallback =
             });
 
             if (result.status === CreateGistResultStatus.Succeeded) {
-              await navigator.clipboard.writeText(result.sharedGist!.url);
+              await navigator.clipboard.writeText(result.sharedGist.url);
               new Notice(
                 `Copied ${isPublic ? 'public' : 'private'} gist URL to clipboard`,
               );
               const updatedContent = upsertSharedGistForFile(
-                result.sharedGist!,
+                result.sharedGist,
                 originalContent,
               );
               editor.setValue(updatedContent);
@@ -297,12 +298,12 @@ const shareGistEditorCallback =
               });
 
               if (result.status === CreateGistResultStatus.Succeeded) {
-                await navigator.clipboard.writeText(result.sharedGist!.url);
+                await navigator.clipboard.writeText(result.sharedGist.url);
                 new Notice(
                   `Copied ${isPublic ? 'public' : 'private'} gist URL to clipboard`,
                 );
                 const updatedContent = upsertSharedGistForFile(
-                  result.sharedGist!,
+                  result.sharedGist,
                   originalContent,
                 );
                 editor.setValue(updatedContent);
@@ -325,18 +326,18 @@ const shareGistEditorCallback =
         });
 
         if (result.status === CreateGistResultStatus.Succeeded) {
-          await navigator.clipboard.writeText(result.sharedGist!.url);
+          await navigator.clipboard.writeText(result.sharedGist.url);
           new Notice(
             `Copied ${isPublic ? 'public' : 'private'} gist URL to clipboard`,
           );
 
           if (enableUpdatingGistsAfterCreation) {
             const updatedContent = upsertSharedGistForFile(
-              result.sharedGist!,
+              result.sharedGist,
               originalContent,
             );
 
-            await app.vault.modify(view.file!, updatedContent);
+            await app.vault.modify(file, updatedContent);
             editor.refresh();
           }
         } else {
@@ -373,7 +374,7 @@ const documentChangedAutoSaveCallback = async (
       });
       if (result.status === CreateGistResultStatus.Succeeded) {
         const updatedContent = upsertSharedGistForFile(
-          result.sharedGist!,
+          result.sharedGist,
           rawContent,
         );
         await file.vault.adapter.write(file.path, updatedContent);
@@ -714,7 +715,7 @@ class ShareAsGistSettingTab extends PluginSettingTab {
 
     containerEl.empty();
 
-    new Setting(containerEl).setName('Share as Gist').setHeading();
+    new Setting(containerEl).setName('GitHub accounts').setHeading();
 
     new Setting(containerEl).setName('GitHub.com').setHeading();
 
@@ -765,7 +766,7 @@ class ShareAsGistSettingTab extends PluginSettingTab {
           }),
       );
 
-    new Setting(containerEl).setName('Advanced options').setHeading();
+    new Setting(containerEl).setName('Advanced').setHeading();
 
     new Setting(containerEl)
       .setName('Enable updating gists after creation')
