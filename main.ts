@@ -31,6 +31,7 @@ import {
   getGhesBaseUrl,
   isDotcomEnabled,
   isGhesEnabled,
+  LOCAL_STORAGE_KEYS,
   setDotcomAccessToken,
   setGhesAccessToken,
   setGhesBaseUrl,
@@ -162,7 +163,7 @@ const copyGistUrlEditorCallback =
       app,
       plugin,
       async (sharedGist) => {
-        navigator.clipboard.writeText(sharedGist.url);
+        await navigator.clipboard.writeText(sharedGist.url);
         new Notice('Copied gist URL to clipboard.');
       },
       'You must share this note as a gist before you can copy its URL to the clipboard.',
@@ -190,7 +191,8 @@ const deleteGistEditorCallback =
     const view = app.workspace.getActiveViewOfType(MarkdownView);
 
     if (!view) {
-      return new Notice('No active file');
+      new Notice('No active file');
+      return;
     }
 
     const editor = view.editor;
@@ -200,7 +202,7 @@ const deleteGistEditorCallback =
       app,
       plugin,
       async (sharedGist) => {
-        const result = await deleteGist({ sharedGist });
+        const result = await deleteGist({ app, sharedGist });
 
         if (result.status === DeleteGistResultStatus.Succeeded) {
           const updatedContent = removeSharedGistForFile(
@@ -230,14 +232,16 @@ const shareGistEditorCallback =
     const view = app.workspace.getActiveViewOfType(MarkdownView);
 
     if (!view) {
-      return new Notice('No active file');
+      new Notice('No active file');
+      return;
     }
 
     const editor = view.editor;
     const originalContent = editor.getValue();
 
     if (!view.file) {
-      return new Notice('No active file');
+      new Notice('No active file');
+      return;
     }
 
     const filename = view.file.name;
@@ -263,12 +267,13 @@ const shareGistEditorCallback =
         async (sharedGist) => {
           if (sharedGist) {
             const result = await updateGist({
+              app,
               sharedGist,
               content,
             });
 
             if (result.status === CreateGistResultStatus.Succeeded) {
-              navigator.clipboard.writeText(result.sharedGist!.url);
+              await navigator.clipboard.writeText(result.sharedGist!.url);
               new Notice(
                 `Copied ${isPublic ? 'public' : 'private'} gist URL to clipboard`,
               );
@@ -283,6 +288,7 @@ const shareGistEditorCallback =
           } else {
             new SetGistDescriptionModal(app, filename, async (description) => {
               const result = await createGist({
+                app,
                 target,
                 content,
                 description,
@@ -291,7 +297,7 @@ const shareGistEditorCallback =
               });
 
               if (result.status === CreateGistResultStatus.Succeeded) {
-                navigator.clipboard.writeText(result.sharedGist!.url);
+                await navigator.clipboard.writeText(result.sharedGist!.url);
                 new Notice(
                   `Copied ${isPublic ? 'public' : 'private'} gist URL to clipboard`,
                 );
@@ -310,6 +316,7 @@ const shareGistEditorCallback =
     } else {
       new SetGistDescriptionModal(app, filename, async (description) => {
         const result = await createGist({
+          app,
           target,
           content,
           description,
@@ -318,7 +325,7 @@ const shareGistEditorCallback =
         });
 
         if (result.status === CreateGistResultStatus.Succeeded) {
-          navigator.clipboard.writeText(result.sharedGist!.url);
+          await navigator.clipboard.writeText(result.sharedGist!.url);
           new Notice(
             `Copied ${isPublic ? 'public' : 'private'} gist URL to clipboard`,
           );
@@ -329,7 +336,7 @@ const shareGistEditorCallback =
               originalContent,
             );
 
-            app.vault.modify(view.file!, updatedContent);
+            await app.vault.modify(view.file!, updatedContent);
             editor.refresh();
           }
         } else {
@@ -342,7 +349,7 @@ const shareGistEditorCallback =
 const documentChangedAutoSaveCallback = async (
   opts: DocumentChangedAutoSaveCallbackParams,
 ) => {
-  const { plugin, file, content: rawContent } = opts;
+  const { app, plugin, file, content: rawContent } = opts;
 
   const { includeFrontMatter, showAutoSaveNotice, includeTableOfContents } =
     await getLatestSettings(plugin);
@@ -360,6 +367,7 @@ const documentChangedAutoSaveCallback = async (
   if (existingSharedGists.length) {
     for (const sharedGist of existingSharedGists) {
       const result = await updateGist({
+        app,
         sharedGist,
         content,
       });
@@ -370,10 +378,12 @@ const documentChangedAutoSaveCallback = async (
         );
         await file.vault.adapter.write(file.path, updatedContent);
         if (showAutoSaveNotice) {
-          return new Notice('Gist updated');
+          new Notice('Gist updated');
+          return;
         }
       } else {
-        return new Notice(`Error: ${result.errorMessage}`);
+        new Notice(`Error: ${result.errorMessage}`);
+        return;
       }
     }
   }
@@ -385,10 +395,25 @@ const hasAtLeastOneSharedGist = (editor: Editor): boolean => {
   return existingSharedGists.length > 0;
 };
 
+const migrateLegacyLocalStorage = (app: App): void => {
+  for (const key of LOCAL_STORAGE_KEYS) {
+    const legacyValue = localStorage.getItem(key);
+    if (legacyValue !== null) {
+      const existingValue = app.loadLocalStorage(key) as unknown;
+      if (typeof existingValue !== 'string') {
+        app.saveLocalStorage(key, legacyValue);
+      }
+      localStorage.removeItem(key);
+    }
+  }
+};
+
 export default class ShareAsGistPlugin extends Plugin {
   settings: ShareAsGistSettings = DEFAULT_SETTINGS;
 
   async onload() {
+    migrateLegacyLocalStorage(this.app);
+
     await this.loadSettings();
 
     this.registerCommands();
@@ -402,7 +427,10 @@ export default class ShareAsGistPlugin extends Plugin {
   addEditorCommandWithCheck(opts: {
     id: string;
     name: string;
-    callback: (editor: Editor, ctx: MarkdownView | MarkdownFileInfo) => void;
+    callback: (
+      editor: Editor,
+      ctx: MarkdownView | MarkdownFileInfo,
+    ) => void | Promise<void>;
     performCheck: (
       editor: Editor,
       ctx: MarkdownView | MarkdownFileInfo,
@@ -419,7 +447,7 @@ export default class ShareAsGistPlugin extends Plugin {
             return true;
           }
 
-          callback(editor, ctx);
+          void callback(editor, ctx);
         }
       },
     });
@@ -435,7 +463,7 @@ export default class ShareAsGistPlugin extends Plugin {
         isPublic: false,
         target: Target.Dotcom,
       }),
-      performCheck: isDotcomEnabled,
+      performCheck: () => isDotcomEnabled(this.app),
     });
 
     this.addEditorCommandWithCheck({
@@ -447,7 +475,7 @@ export default class ShareAsGistPlugin extends Plugin {
         isPublic: true,
         target: Target.Dotcom,
       }),
-      performCheck: isDotcomEnabled,
+      performCheck: () => isDotcomEnabled(this.app),
     });
 
     this.addEditorCommandWithCheck({
@@ -459,7 +487,7 @@ export default class ShareAsGistPlugin extends Plugin {
         isPublic: false,
         target: Target.GitHubEnterpriseServer,
       }),
-      performCheck: isGhesEnabled,
+      performCheck: () => isGhesEnabled(this.app),
     });
 
     this.addEditorCommandWithCheck({
@@ -471,7 +499,7 @@ export default class ShareAsGistPlugin extends Plugin {
         isPublic: true,
         target: Target.GitHubEnterpriseServer,
       }),
-      performCheck: isGhesEnabled,
+      performCheck: () => isGhesEnabled(this.app),
     });
 
     this.addEditorCommandWithCheck({
@@ -509,7 +537,7 @@ export default class ShareAsGistPlugin extends Plugin {
     const previousContents: Record<string, string> = {};
     const debouncedCallbacks: Record<
       string,
-      Debouncer<[string, TFile], Promise<Notice | undefined>>
+      Debouncer<[string, TFile], Promise<void>>
     > = {};
 
     this.app.vault.on('modify', async (abstractFile: TAbstractFile) => {
@@ -542,7 +570,7 @@ export default class ShareAsGistPlugin extends Plugin {
       const { enableAutoSaving } = await getLatestSettings(this);
 
       if (enableAutoSaving) {
-        await debouncedCallbacks[file.path](content, file);
+        debouncedCallbacks[file.path](content, file);
       }
     });
   }
@@ -583,14 +611,14 @@ class SelectExistingGistModal extends SuggestModal<SharedGist | null> {
 
   renderSuggestion(sharedGist: SharedGist | null, el: HTMLElement) {
     if (sharedGist === null) {
-      el.createEl('div', { text: 'Create new gist' });
+      el.createDiv({ text: 'Create new gist' });
     } else {
       const targetLabel =
         getTargetForSharedGist(sharedGist) === Target.Dotcom
           ? 'GitHub.com'
           : new URL(sharedGist.baseUrl).host;
 
-      el.createEl('div', {
+      el.createDiv({
         text:
           (sharedGist.isPublic ? 'Public gist' : 'Private gist') +
           ` on ${targetLabel}`,
@@ -601,18 +629,22 @@ class SelectExistingGistModal extends SuggestModal<SharedGist | null> {
   }
 
   onChooseSuggestion(sharedGist: SharedGist | null) {
-    this.onSubmit(sharedGist).then(() => this.close());
+    this.onSubmit(sharedGist)
+      .then(() => this.close())
+      .catch(() => {
+        /* errors are surfaced via Notice within onSubmit */
+      });
   }
 }
 
 class SetGistDescriptionModal extends Modal {
   description: string | null = null;
-  onSubmit: (description: string | null) => void;
+  onSubmit: (description: string | null) => void | Promise<void>;
 
   constructor(
     app: App,
     filename: string,
-    onSubmit: (description: string | null) => void,
+    onSubmit: (description: string | null) => void | Promise<void>,
   ) {
     super(app);
     this.description = filename;
@@ -642,7 +674,7 @@ class SetGistDescriptionModal extends Modal {
         .setCta()
         .onClick(() => {
           this.close();
-          this.onSubmit(this.description);
+          void this.onSubmit(this.description);
         }),
     );
 
@@ -654,7 +686,7 @@ class SetGistDescriptionModal extends Modal {
       }
 
       this.close();
-      this.onSubmit(this.description);
+      void this.onSubmit(this.description);
     });
   }
 
@@ -675,15 +707,16 @@ class ShareAsGistSettingTab extends PluginSettingTab {
   display(): void {
     const { containerEl } = this;
 
-    const dotcomAccessToken = getDotcomAccessToken();
-    const ghesBaseUrl = getGhesBaseUrl();
-    const ghesAccessToken = getGhesAccessToken();
+    const app = this.plugin.app;
+    const dotcomAccessToken = getDotcomAccessToken(app);
+    const ghesBaseUrl = getGhesBaseUrl(app);
+    const ghesAccessToken = getGhesAccessToken(app);
 
     containerEl.empty();
 
-    containerEl.createEl('h2', { text: 'Share as Gist' });
+    new Setting(containerEl).setName('Share as Gist').setHeading();
 
-    containerEl.createEl('h3', { text: 'GitHub.com' });
+    new Setting(containerEl).setName('GitHub.com').setHeading();
 
     new Setting(containerEl)
       .setName('Personal access token')
@@ -695,12 +728,12 @@ class ShareAsGistSettingTab extends PluginSettingTab {
           .setPlaceholder('Your personal access token')
           .setValue(dotcomAccessToken ?? '')
           .onChange(async (value) => {
-            setDotcomAccessToken(value);
+            setDotcomAccessToken(app, value);
             await this.plugin.saveSettings();
           }),
       );
 
-    containerEl.createEl('h3', { text: 'GitHub Enterprise Server' });
+    new Setting(containerEl).setName('GitHub Enterprise Server').setHeading();
 
     new Setting(containerEl)
       .setName('Base URL')
@@ -712,7 +745,7 @@ class ShareAsGistSettingTab extends PluginSettingTab {
           .setPlaceholder('https://github.example.com/api/v3')
           .setValue(ghesBaseUrl ?? '')
           .onChange(async (value) => {
-            setGhesBaseUrl(value);
+            setGhesBaseUrl(app, value);
             await this.plugin.saveSettings();
           }),
       );
@@ -727,12 +760,12 @@ class ShareAsGistSettingTab extends PluginSettingTab {
           .setPlaceholder('Your personal access token')
           .setValue(ghesAccessToken ?? '')
           .onChange(async (value) => {
-            setGhesAccessToken(value);
+            setGhesAccessToken(app, value);
             await this.plugin.saveSettings();
           }),
       );
 
-    containerEl.createEl('h3', { text: 'Advanced options' });
+    new Setting(containerEl).setName('Advanced options').setHeading();
 
     new Setting(containerEl)
       .setName('Enable updating gists after creation')
