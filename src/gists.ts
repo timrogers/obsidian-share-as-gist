@@ -164,10 +164,10 @@ export const createGist = async (
     return {
       status: CreateGistResultStatus.Succeeded,
       sharedGist: {
-        id: response.data.id!,
-        url: response.data.html_url!,
-        createdAt: response.data.created_at!,
-        updatedAt: response.data.updated_at!,
+        id: response.data.id,
+        url: response.data.html_url,
+        createdAt: response.data.created_at,
+        updatedAt: response.data.updated_at,
         filename,
         isPublic,
         baseUrl: baseUrl ?? '',
