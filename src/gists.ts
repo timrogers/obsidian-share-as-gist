@@ -33,8 +33,7 @@ type FailedCreateGistResult = {
 };
 
 export type CreateGistResult =
-  | SuccessfulCreateGistResult
-  | FailedCreateGistResult;
+  SuccessfulCreateGistResult | FailedCreateGistResult;
 
 interface CreateGistOptions {
   app: App;
