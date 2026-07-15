@@ -1,11 +1,8 @@
 {
   "compilerOptions": {
-    "ignoreDeprecations": "6.0",
-    "paths": {
-      "*": [
-        "./*"
-      ]
-    },
+    "ignoreDeprecations": "5.0",
+    "baseUrl": ".",
+    "moduleResolution": "node",
     "inlineSourceMap": true,
     "inlineSources": true,
     "module": "ESNext",
