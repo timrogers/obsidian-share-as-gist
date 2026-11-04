@@ -1,5 +1,6 @@
 import {
   App,
+  Command,
   Debouncer,
   Editor,
   MarkdownFileInfo,
@@ -439,9 +440,18 @@ export default class ShareAsGistPlugin extends Plugin {
   }) {
     const { id, name, performCheck, callback } = opts;
 
-    this.addCommand({
+    // `allowPreview` and `allowProperties` are supported by Obsidian but missing
+    // from the published type definitions. Without them, editor commands are
+    // hidden from the command palette in Reading view or when the properties
+    // block is focused.
+    const command: Command & {
+      allowPreview: boolean;
+      allowProperties: boolean;
+    } = {
       id,
       name,
+      allowPreview: true,
+      allowProperties: true,
       editorCheckCallback: (checking, editor, ctx) => {
         if (performCheck(editor, ctx)) {
           if (checking) {
@@ -451,7 +461,9 @@ export default class ShareAsGistPlugin extends Plugin {
           void callback(editor, ctx);
         }
       },
-    });
+    };
+
+    this.addCommand(command);
   }
 
   registerCommands() {
