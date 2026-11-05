@@ -1,9 +1,7 @@
 import {
   App,
-  Command,
   Debouncer,
   Editor,
-  MarkdownFileInfo,
   MarkdownView,
   Modal,
   Notice,
@@ -426,48 +424,38 @@ export default class ShareAsGistPlugin extends Plugin {
     this.addSettingTab(new ShareAsGistSettingTab(this.app, this));
   }
 
-  addEditorCommandWithCheck(opts: {
+  addMarkdownViewCommandWithCheck(opts: {
     id: string;
     name: string;
-    callback: (
-      editor: Editor,
-      ctx: MarkdownView | MarkdownFileInfo,
-    ) => void | Promise<void>;
-    performCheck: (
-      editor: Editor,
-      ctx: MarkdownView | MarkdownFileInfo,
-    ) => boolean;
+    callback: () => void | Promise<void>;
+    performCheck: (editor: Editor) => boolean;
   }) {
     const { id, name, performCheck, callback } = opts;
 
-    // `allowPreview` and `allowProperties` are supported by Obsidian but missing
-    // from the published type definitions. Without them, editor commands are
-    // hidden from the command palette in Reading view or when the properties
-    // block is focused.
-    const command: Command & {
-      allowPreview: boolean;
-      allowProperties: boolean;
-    } = {
+    // Use `checkCallback` rather than `editorCheckCallback` so the commands
+    // are also available in Reading view. Obsidian hides editor commands from
+    // the command palette in Reading view.
+    this.addCommand({
       id,
       name,
-      allowPreview: true,
-      allowProperties: true,
-      editorCheckCallback: (checking, editor, ctx) => {
-        if (performCheck(editor, ctx)) {
-          if (checking) {
-            return true;
-          }
+      checkCallback: (checking) => {
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 
-          void callback(editor, ctx);
+        if (!view || !performCheck(view.editor)) {
+          return false;
         }
-      },
-    };
 
-    this.addCommand(command);
+        if (!checking) {
+          void callback();
+        }
+
+        return true;
+      },
+    });
   }
 
   registerCommands() {
-    this.addEditorCommandWithCheck({
+    this.addMarkdownViewCommandWithCheck({
       id: 'share-as-private-dotcom-gist',
       name: 'Share as private gist on GitHub.com',
       callback: shareGistEditorCallback({
@@ -479,7 +467,7 @@ export default class ShareAsGistPlugin extends Plugin {
       performCheck: () => isDotcomEnabled(this.app),
     });
 
-    this.addEditorCommandWithCheck({
+    this.addMarkdownViewCommandWithCheck({
       id: 'share-as-public-dotcom-gist',
       name: 'Share as public gist on GitHub.com',
       callback: shareGistEditorCallback({
@@ -491,7 +479,7 @@ export default class ShareAsGistPlugin extends Plugin {
       performCheck: () => isDotcomEnabled(this.app),
     });
 
-    this.addEditorCommandWithCheck({
+    this.addMarkdownViewCommandWithCheck({
       id: 'share-as-private-ghes-gist',
       name: 'Share as private gist on GitHub Enterprise Server',
       callback: shareGistEditorCallback({
@@ -503,7 +491,7 @@ export default class ShareAsGistPlugin extends Plugin {
       performCheck: () => isGhesEnabled(this.app),
     });
 
-    this.addEditorCommandWithCheck({
+    this.addMarkdownViewCommandWithCheck({
       id: 'share-as-public-ghes-gist',
       name: 'Share as public gist on GitHub Enterprise Server',
       callback: shareGistEditorCallback({
@@ -515,7 +503,7 @@ export default class ShareAsGistPlugin extends Plugin {
       performCheck: () => isGhesEnabled(this.app),
     });
 
-    this.addEditorCommandWithCheck({
+    this.addMarkdownViewCommandWithCheck({
       id: 'copy-gist-url',
       name: 'Copy gist URL',
       callback: copyGistUrlEditorCallback({
@@ -525,7 +513,7 @@ export default class ShareAsGistPlugin extends Plugin {
       performCheck: hasAtLeastOneSharedGist,
     });
 
-    this.addEditorCommandWithCheck({
+    this.addMarkdownViewCommandWithCheck({
       id: 'open-gist-url',
       name: 'Open gist',
       callback: openGistEditorCallback({
@@ -535,7 +523,7 @@ export default class ShareAsGistPlugin extends Plugin {
       performCheck: hasAtLeastOneSharedGist,
     });
 
-    this.addEditorCommandWithCheck({
+    this.addMarkdownViewCommandWithCheck({
       id: 'delete-gist',
       name: 'Delete gist',
       callback: deleteGistEditorCallback({
